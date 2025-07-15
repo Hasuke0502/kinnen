@@ -1,0 +1,303 @@
+---
+alwaysApply: true
+---
+
+# Next.js App Router ベストプラクティス
+
+## 1. Server ComponentとRoute Handlerの適切な使い分け
+
+### ❌ 避けるべきパターン
+```tsx
+// Server ComponentでRoute Handlerを呼び出す（不要なネットワークホップ）
+export default async function Page() {
+  let res = await fetch('http://localhost:3000/api/data');
+  let data = await res.json();
+  return <h1>{JSON.stringify(data)}</h1>;
+}
+```
+
+### ✅ 推奨パターン
+```tsx
+// Server Componentで直接データを取得
+export default async function Page() {
+  // 非同期関数を直接呼び出し
+  let data = await getData(); 
+  
+  // または外部APIを直接呼び出し
+  let response = await fetch('https://api.example.com/data');
+  let data = await response.json();
+  
+  return <h1>{JSON.stringify(data)}</h1>;
+}
+```
+
+## 2. データの再検証（Revalidation）
+
+### Server Actionsでの適切なrevalidation
+```tsx
+import { revalidatePath } from 'next/cache';
+
+export default async function Page() {
+  let names = await sql`SELECT * FROM users`;
+
+  async function create(formData: FormData) {
+    'use server';
+    
+    let name = formData.get('name');
+    await sql`INSERT INTO users (name) VALUES (${name})`;
+    
+    // データ更新後にページを再検証
+    revalidatePath('/');
+  }
+
+  return (
+    <form action={create}>
+      <input name="name" type="text" />
+      <button type="submit">作成</button>
+    </form>
+  );
+}
+```
+
+## 3. リダイレクトの適切な処理
+
+### ❌ 避けるべきパターン
+```tsx
+// try/catchブロック内でredirectを使用
+try {
+  // 何らかの処理
+  redirect('/login'); // これは適切ではない
+} catch (error) {
+  // エラーハンドリング
+}
+```
+
+### ✅ 推奨パターン
+```tsx
+import { redirect } from 'next/navigation';
+
+// Server Componentでのリダイレクト
+export default async function Profile({ params }) {
+  const team = await fetchTeam(params.id);
+  
+  if (!team) {
+    redirect('/login'); // try/catchの外で使用
+  }
+  
+  // コンポーネントの残り部分
+}
+
+// Client ComponentではServer Action経由でリダイレクト
+'use client';
+export function ClientRedirect() {
+  return (
+    <form action={navigate}>
+      <button>送信</button>
+    </form>
+  );
+}
+
+// actions.ts
+'use server';
+export async function navigate() {
+  redirect('/posts');
+}
+```
+
+## 4. Route Handlerのキャッシュ戦略
+
+### 静的Route Handler（デフォルト）
+```tsx
+// GETメソッドはデフォルトでキャッシュされる
+export async function GET() {
+  return Response.json({ message: 'Hello World' });
+}
+```
+
+### 動的Route Handler
+```tsx
+// 動的にしたい場合
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  return Response.json({ 
+    message: 'Hello World',
+    timestamp: new Date().toISOString()
+  });
+}
+```
+
+## 5. ファイル構成のベストプラクティス
+
+### 推奨ディレクトリ構造
+```
+app/
+├── layout.tsx              # ルートレイアウト
+├── page.tsx               # ホームページ
+├── loading.tsx            # ローディングUI
+├── error.tsx             # エラーUI
+├── not-found.tsx         # 404ページ
+├── globals.css           # グローバルスタイル
+├── (routes)/             # ルートグループ
+│   ├── dashboard/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── settings/
+│   │       └── page.tsx
+│   └── auth/
+│       ├── login/
+│       │   └── page.tsx
+│       └── register/
+│           └── page.tsx
+├── api/                  # API Routes
+│   ├── users/
+│   │   └── route.ts
+│   └── auth/
+│       └── route.ts
+└── _components/          # 再利用可能なコンポーネント
+    ├── ui/
+    └── forms/
+```
+
+## 6. パフォーマンス最適化
+
+### 適切なLoading States
+```tsx
+// loading.tsx
+export default function Loading() {
+  return <div>読み込み中...</div>;
+}
+
+// Suspenseを使用した部分的ローディング
+import { Suspense } from 'react';
+
+export default function Page() {
+  return (
+    <div>
+      <h1>ダッシュボード</h1>
+      <Suspense fallback={<div>統計を読み込み中...</div>}>
+        <Stats />
+      </Suspense>
+      <Suspense fallback={<div>チャートを読み込み中...</div>}>
+        <Charts />
+      </Suspense>
+    </div>
+  );
+}
+```
+
+### 適切なエラーハンドリング
+```tsx
+// error.tsx
+'use client';
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div>
+      <h2>エラーが発生しました</h2>
+      <button onClick={() => reset()}>再試行</button>
+    </div>
+  );
+}
+```
+
+## 7. SEOとメタデータ
+
+### 静的メタデータ
+```tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'ページタイトル',
+  description: 'ページの説明',
+};
+```
+
+### 動的メタデータ
+```tsx
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const post = await fetchPost(params.id);
+  
+  return {
+    title: post.title,
+    description: post.excerpt,
+  };
+}
+```
+
+## 8. データフェッチングのベストプラクティス
+
+### キャッシュ制御
+```tsx
+// デフォルト：無期限キャッシュ
+const response = await fetch('https://api.example.com/data');
+
+// 60秒間キャッシュ
+const response = await fetch('https://api.example.com/data', {
+  next: { revalidate: 60 }
+});
+
+// キャッシュなし
+const response = await fetch('https://api.example.com/data', {
+  cache: 'no-store'
+});
+```
+
+### 並列データフェッチング
+```tsx
+export default async function Page() {
+  // 並列でデータを取得
+  const [users, posts] = await Promise.all([
+    fetchUsers(),
+    fetchPosts()
+  ]);
+
+  return (
+    <div>
+      <UserList users={users} />
+      <PostList posts={posts} />
+    </div>
+  );
+}
+```
+
+## 9. TypeScript統合
+
+### 型安全なparams
+```tsx
+interface PageProps {
+  params: {
+    id: string;
+  };
+  searchParams: {
+    [key: string]: string | string[] | undefined;
+  };
+}
+
+export default function Page({ params, searchParams }: PageProps) {
+  // paramsとsearchParamsは型安全
+}
+```
+
+## 10. パフォーマンス監視
+
+### 動的importを使用したコード分割
+```tsx
+import dynamic from 'next/dynamic';
+
+const DynamicComponent = dynamic(() => import('./HeavyComponent'), {
+  loading: () => <p>読み込み中...</p>,
+});
+
+export default function Page() {
+  return <DynamicComponent />;
+}
+```
+
+これらのベストプラクティスに従うことで、Next.js App Routerを使用した高性能で保守しやすいアプリケーションを構築できます。
