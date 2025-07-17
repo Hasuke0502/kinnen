@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Header from '@/components/Header'
 
 export default async function DonationsPage() {
   const supabase = await createClient()
@@ -61,20 +62,13 @@ export default async function DonationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/dashboard" className="text-gray-500 hover:text-gray-700 mr-4">
-                ← ダッシュボード
-              </Link>
-              <span className="text-2xl mr-3">🤝</span>
-              <h1 className="text-xl font-semibold text-gray-900">募金証明・社会貢献</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header 
+        title="募金証明・社会貢献" 
+        icon="🤝" 
+        showBackButton={true}
+        backHref="/dashboard"
+        backLabel="ダッシュボード"
+      />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">

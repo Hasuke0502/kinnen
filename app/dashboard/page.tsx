@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import MoneyMonster from '@/components/MoneyMonster'
-import DashboardNavigation from '@/components/DashboardNavigation'
+import Header from '@/components/Header'
 
 import { cookies } from 'next/headers'
 
@@ -129,18 +129,7 @@ export default async function DashboardPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <span className="text-2xl mr-3">🏰</span>
-              <h1 className="text-xl font-semibold text-gray-900">禁煙30日チャレンジ</h1>
-            </div>
-            <DashboardNavigation />
-          </div>
-        </div>
-      </header>
+      <Header title="禁煙30日チャレンジ" icon="🏰" />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -425,12 +414,12 @@ export default async function DashboardPage({
           </div>
 
           {/* 記録一覧 */}
-          {records && records.length > 0 && (
-            <div className="mt-8">
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">記録履歴</h3>
-                </div>
+          <div id="records-history" className="mt-8 scroll-mt-24">
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">記録履歴</h3>
+              </div>
+              {records && records.length > 0 ? (
                 <div className="divide-y divide-gray-200">
                   {records.slice().reverse().map((record) => (
                     <div key={record.id} className="px-6 py-4">
@@ -470,9 +459,21 @@ export default async function DashboardPage({
                     </div>
                   ))}
                 </div>
-              </div>
+              ) : (
+                <div className="px-6 py-8 text-center">
+                  <span className="text-4xl block mb-4">📝</span>
+                  <p className="text-lg font-medium text-gray-900 mb-2">記録履歴はまだありません</p>
+                  <p className="text-gray-600 mb-4">毎日の記録をつけると、ここに履歴が表示されます</p>
+                  <Link
+                    href="/record"
+                    className="bg-indigo-600 text-white px-6 py-2 rounded-md font-medium hover:bg-indigo-700 inline-block"
+                  >
+                    今日の記録をつける
+                  </Link>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </main>
     </div>
