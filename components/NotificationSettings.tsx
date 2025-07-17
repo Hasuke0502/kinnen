@@ -6,7 +6,8 @@ import {
   requestNotificationPermission, 
   saveNotificationSettings,
   getNotificationSettings,
-  sendLocalNotification 
+  sendLocalNotification,
+  resetNotificationModalState
 } from '@/lib/notifications'
 
 interface NotificationSettingsProps {
@@ -41,10 +42,14 @@ export default function NotificationSettings({ defaultRecordTime = '20:00' }: No
       if (granted) {
         setEnabled(true)
         // テスト通知を送信
-        sendLocalNotification('通知が有効になりました', {
-          body: '記録時間になったらお知らせします',
-          tag: 'permission-granted'
+        sendLocalNotification('🎉 通知が有効になりました！', {
+          body: '禁煙チャレンジの記録時間になったらお知らせします。30日間、一緒に頑張りましょう！',
+          tag: 'permission-granted',
+          icon: '/favicon.ico'
         })
+        
+        // モーダルの表示状態をリセット（次回拒否した場合に再表示可能にするため）
+        resetNotificationModalState()
       }
     } catch (error) {
       console.error('Failed to request permission:', error)

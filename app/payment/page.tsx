@@ -133,7 +133,7 @@ export default async function PaymentPage({
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">募金について</h4>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>募金額 = 参加費 × (禁煙成功日数 ÷ 30日)</li>
+                  <li>募金額 = 参加費 × (記録成功日数 ÷ 30日)</li>
                   <li>募金先への寄付は月次でまとめて実施されます</li>
                   <li>募金の証明書は募金証明ページで確認できます</li>
                 </ul>

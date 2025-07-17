@@ -118,7 +118,7 @@ export default async function DonationsPage() {
                   {userChallenge && (
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>禁煙成功日:</span>
+                        <span>記録成功日数:</span>
                         <span className="font-medium">{userChallenge.total_success_days}日</span>
                       </div>
                       <div className="flex justify-between">
@@ -132,7 +132,7 @@ export default async function DonationsPage() {
                 {userContribution > 0 && (
                   <div className="mt-4 p-3 bg-green-50 rounded-lg">
                     <p className="text-sm text-green-800">
-                      あなたの禁煙チャレンジにより、¥{userContribution.toLocaleString()}が社会貢献に繋がります！
+                      あなたの禁煙成功により、¥{userContribution.toLocaleString()}が社会貢献に繋がります！
                     </p>
                   </div>
                 )}
@@ -277,7 +277,7 @@ export default async function DonationsPage() {
                   <strong>透明性:</strong> すべての募金実績は証明書や領収書とともに公開され、寄付の透明性を確保しています
                 </li>
                 <li>
-                  <strong>計算式:</strong> 募金額 = 参加費 × (禁煙成功日数 ÷ 30日)
+                  <strong>計算式:</strong> 募金額 = 参加費 × (記録成功日数 ÷ 30日)
                 </li>
               </ul>
             </div>

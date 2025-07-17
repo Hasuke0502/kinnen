@@ -1,10 +1,19 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { logout } from '@/app/auth/actions'
 import Link from 'next/link'
 import MoneyMonster from '@/components/MoneyMonster'
+import DashboardNavigation from '@/components/DashboardNavigation'
+import DashboardActions, { RecordAction } from '@/components/DashboardActions'
+import { cookies } from 'next/headers'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams
+}: {
+  searchParams: { message?: string }
+}) {
+  // cookies()を呼び出してキャッシュから除外
+  await cookies()
+  
   const supabase = await createClient()
   
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -63,11 +72,25 @@ export default async function DashboardPage() {
   const endDate = new Date(challenge.end_date)
   const currentDate = new Date()
   const totalDays = 30
-  const elapsedDays = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+  const elapsedDays = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
   const remainingDays = Math.max(0, totalDays - elapsedDays)
   const achievementRate = totalDays > 0 ? (challenge.total_success_days / totalDays) * 100 : 0
-  const donationAmount = Math.floor(profile.participation_fee * (challenge.total_success_days / totalDays))
-  const remainingAmount = profile.participation_fee - donationAmount
+  
+  // 返金・募金額の計算
+  let payoutAmount = 0
+  if (profile.payout_method === 'refund') {
+    // 返金の場合：参加費が500円を超える場合のみ手数料を引いて計算
+    if (profile.participation_fee > 500) {
+      payoutAmount = Math.floor((profile.participation_fee - 500) * (challenge.total_success_days / totalDays))
+    } else {
+      payoutAmount = 0
+    }
+  } else {
+    // 募金の場合：参加費全額が対象
+    payoutAmount = Math.floor(profile.participation_fee * (challenge.total_success_days / totalDays))
+  }
+  
+  const remainingAmount = profile.participation_fee - (profile.payout_method === 'donation' ? payoutAmount : (profile.participation_fee > 500 ? payoutAmount + 500 : payoutAmount))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,40 +102,20 @@ export default async function DashboardPage() {
               <span className="text-2xl mr-3">🏰</span>
               <h1 className="text-xl font-semibold text-gray-900">禁煙30日チャレンジ</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/progress"
-                className="text-indigo-600 hover:text-indigo-800 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                進捗詳細
-              </Link>
-              <Link
-                href="/donations"
-                className="text-green-600 hover:text-green-800 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                募金証明
-              </Link>
-              <Link
-                href="/settings"
-                className="text-gray-600 hover:text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                設定
-              </Link>
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  ログアウト
-                </button>
-              </form>
-            </div>
+            <DashboardNavigation />
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* 成功メッセージ */}
+          {searchParams.message && (
+            <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+              {decodeURIComponent(searchParams.message)}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* メインエリア */}
             <div className="lg:col-span-2 space-y-6">
@@ -128,6 +131,7 @@ export default async function DashboardPage() {
               {/* 今日の記録 */}
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">今日の記録</h3>
+                
                 {todayRecord ? (
                   <div className="text-center">
                     <span className="text-4xl block mb-4">
@@ -151,12 +155,7 @@ export default async function DashboardPage() {
                   <div className="text-center">
                     <span className="text-4xl block mb-4">❓</span>
                     <p className="text-lg font-medium mb-4">今日の記録をつけましょう</p>
-                    <Link
-                      href="/record"
-                      className="bg-indigo-600 text-white px-6 py-2 rounded-md font-medium hover:bg-indigo-700 inline-block"
-                    >
-                      記録をつける
-                    </Link>
+                    <RecordAction hasRecordToday={false} />
                   </div>
                 )}
               </div>
@@ -191,7 +190,7 @@ export default async function DashboardPage() {
                   
                   <div>
                     <div className="flex justify-between text-sm">
-                      <span>禁煙成功日</span>
+                      <span>記録成功日</span>
                       <span>{challenge.total_success_days}日</span>
                     </div>
                   </div>
@@ -205,26 +204,35 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* 募金予定 */}
+              {/* 返金・募金予定 */}
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">募金状況</h3>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {profile.payout_method === 'refund' ? '返金状況' : '募金状況'}
+                  </h3>
                   <Link
-                    href="/donations"
-                    className="text-sm text-green-600 hover:text-green-800"
+                    href={profile.payout_method === 'refund' ? "/settings" : "/donations"}
+                    className={`text-sm hover:underline ${
+                      profile.payout_method === 'refund' ? 'text-blue-600 hover:text-blue-800' : 'text-green-600 hover:text-green-800'
+                    }`}
                   >
-                    証明 →
+                    {profile.payout_method === 'refund' ? '設定 →' : '証明 →'}
                   </Link>
                 </div>
-                <div className="space-y-3">
+                
+                <div className="space-y-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">
-                      ¥{donationAmount.toLocaleString()}
+                    <p className={`text-2xl font-bold ${
+                      profile.payout_method === 'refund' ? 'text-blue-600' : 'text-green-600'
+                    }`}>
+                      ¥{payoutAmount.toLocaleString()}
                     </p>
-                    <p className="text-sm text-gray-600">現在の募金予定額</p>
+                    <p className="text-sm text-gray-600">
+                      現在の{profile.payout_method === 'refund' ? '返金' : '募金'}予定額
+                    </p>
                   </div>
                   
-                  {donationTarget && (
+                  {profile.payout_method === 'donation' && donationTarget && (
                     <div className="border-t pt-3">
                       <h4 className="font-medium text-gray-900">{donationTarget.name}</h4>
                       <p className="text-sm text-gray-600">{donationTarget.description}</p>
@@ -232,7 +240,12 @@ export default async function DashboardPage() {
                   )}
                   
                   <div className="text-xs text-gray-500">
-                    参加費 × (禁煙成功日 ÷ 30日) = 募金額
+                    {profile.payout_method === 'refund' 
+                      ? profile.participation_fee > 500
+                        ? '(参加費 - 500円) × (記録成功日数 ÷ 30日) = 返金額'
+                        : '参加費が500円以下のため返金なし'
+                      : '参加費 × (記録成功日数 ÷ 30日) = 募金額'
+                    }
                   </div>
                 </div>
               </div>
@@ -269,35 +282,7 @@ export default async function DashboardPage() {
               </div>
 
               {/* クイックアクション */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">クイックアクション</h3>
-                <div className="space-y-3">
-                  {!todayRecord ? (
-                    <Link
-                      href="/record"
-                      className="w-full bg-indigo-600 text-white text-center py-2 px-4 rounded-md font-medium hover:bg-indigo-700 block"
-                    >
-                      今日の記録をつける
-                    </Link>
-                  ) : (
-                    <div className="text-center text-gray-500">
-                      今日の記録は完了しています
-                    </div>
-                  )}
-                  <Link
-                    href="/progress"
-                    className="w-full bg-gray-600 text-white text-center py-2 px-4 rounded-md font-medium hover:bg-gray-700 block"
-                  >
-                    進捗詳細を見る
-                  </Link>
-                  <Link
-                    href="/donations"
-                    className="w-full bg-green-600 text-white text-center py-2 px-4 rounded-md font-medium hover:bg-green-700 block"
-                  >
-                    募金証明を見る
-                  </Link>
-                </div>
-              </div>
+              <DashboardActions hasRecordToday={!!todayRecord} />
             </div>
           </div>
         </div>

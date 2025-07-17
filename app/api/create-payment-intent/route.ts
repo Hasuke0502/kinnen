@@ -15,11 +15,39 @@ export async function POST(request: NextRequest) {
     const { amount, challengeId } = await request.json()
 
     // リクエストの検証
-    if (!amount || !challengeId || amount < 100) {
+    if (amount === undefined || !challengeId || amount < 0) {
       return NextResponse.json(
         { error: 'Invalid amount or challenge ID' }, 
         { status: 400 }
       )
+    }
+
+    // 0円の場合は決済処理をスキップ
+    if (amount === 0) {
+      // チャレンジの状態を直接更新
+      const { error: updateError } = await supabase
+        .from('challenges')
+        .update({ 
+          payment_intent_id: 'free_participation',
+          status: 'active'
+        })
+        .eq('id', challengeId)
+        .eq('user_id', user.id)
+
+      if (updateError) {
+        console.error('Challenge update error:', updateError)
+        return NextResponse.json(
+          { error: 'Failed to update challenge' }, 
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        client_secret: null,
+        payment_intent_id: 'free_participation',
+        amount: 0,
+        message: '0円での参加が完了しました'
+      })
     }
 
     // チャレンジの存在確認

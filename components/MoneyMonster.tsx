@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSoundManager } from './SoundManager'
 
 interface MoneyMonsterProps {
   totalAmount: number
@@ -25,6 +26,7 @@ export default function MoneyMonster({
 }: MoneyMonsterProps) {
   const [animatingDamage, setAnimatingDamage] = useState(false)
   const [currentMonsterState, setCurrentMonsterState] = useState('healthy')
+  const { playDamageSound, playSuccessSound } = useSoundManager()
   
   // モンスターの状態を決定
   useEffect(() => {
@@ -45,10 +47,16 @@ export default function MoneyMonster({
   useEffect(() => {
     if (showDamageAnimation) {
       setAnimatingDamage(true)
+      // 音響効果を再生
+      if (isSuccess) {
+        playSuccessSound()
+      } else {
+        playDamageSound()
+      }
       const timer = setTimeout(() => setAnimatingDamage(false), 2000)
       return () => clearTimeout(timer)
     }
-  }, [showDamageAnimation])
+  }, [showDamageAnimation, isSuccess, playSuccessSound, playDamageSound])
 
   const getMonsterEmoji = () => {
     switch (currentMonsterState) {
@@ -170,11 +178,11 @@ export default function MoneyMonster({
           <div className="mt-4 grid grid-cols-2 gap-4 text-xs">
             <div className="bg-white/10 rounded-lg p-2">
               <div className="text-green-300 font-bold text-lg">{totalSuccessDays}</div>
-              <div>記録成功日</div>
+              <div>記録成功日数</div>
             </div>
             <div className="bg-white/10 rounded-lg p-2">
               <div className="text-orange-300 font-bold text-lg">{totalFailedDays}</div>
-              <div>記録忘れ</div>
+              <div>未記録日数</div>
             </div>
           </div>
 

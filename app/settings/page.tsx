@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import NotificationSettings from '@/components/NotificationSettings'
+import SoundSettings from '@/components/SoundSettings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -59,6 +60,9 @@ export default async function SettingsPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* 通知設定 */}
             <NotificationSettings defaultRecordTime={profile.record_time} />
+
+            {/* 音響効果設定 */}
+            <SoundSettings />
 
             {/* チャレンジ設定 */}
             <div className="bg-white rounded-lg shadow p-6">

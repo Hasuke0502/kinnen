@@ -141,6 +141,12 @@ export function getNotificationSettings(): NotificationSettings | null {
   return settings ? JSON.parse(settings) : null
 }
 
+// 通知許可モーダルの表示状態をリセット
+export function resetNotificationModalState(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem('notification-modal-seen')
+}
+
 // 達成マイルストーン通知
 export function sendAchievementNotification(achievementRate: number, successDays: number): void {
   const milestones = [25, 50, 75, 100]

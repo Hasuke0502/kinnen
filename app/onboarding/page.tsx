@@ -202,8 +202,13 @@ export default function OnboardingPage() {
 
       console.log('チャレンジ作成成功:', challengeResult)
 
-      // 成功時はダッシュボードへリダイレクト
-      router.push('/dashboard')
+      // 参加費が0円の場合は決済をスキップしてダッシュボードへ
+      if (formData.participationFee === 0) {
+        router.push('/dashboard?setup=complete')
+      } else {
+        // 参加費がある場合は決済ページへ
+        router.push(`/payment?challenge_id=${challengeResult[0].id}`)
+      }
     } catch (error) {
       console.error('予期しないエラー:', error)
       setError(`予期しないエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`)
@@ -247,12 +252,12 @@ export default function OnboardingPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">設定進捗</span>
-              <span className="text-sm font-medium text-gray-600">{step + 1}/5</span>
+              <span className="text-sm font-medium text-gray-600">{step + 1}/6</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((step + 1) / 5) * 100}%` }}
+                style={{ width: `${((step + 1) / 6) * 100}%` }}
               />
             </div>
           </div>
@@ -346,23 +351,35 @@ export default function OnboardingPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">箱数</label>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="10"
-                    step="0.5"
+                  <select
                     value={formData.smokingAmount}
                     onChange={(e) => setFormData(prev => ({ 
                       ...prev, 
                       smokingAmount: parseFloat(e.target.value) 
                     }))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-sm text-gray-500 mt-1">
-                    <span>0.5箱</span>
-                    <span className="font-medium">{formData.smokingAmount}箱</span>
-                    <span>10箱</span>
-                  </div>
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="0.5">0.5箱</option>
+                    <option value="1">1箱</option>
+                    <option value="1.5">1.5箱</option>
+                    <option value="2">2箱</option>
+                    <option value="2.5">2.5箱</option>
+                    <option value="3">3箱</option>
+                    <option value="3.5">3.5箱</option>
+                    <option value="4">4箱</option>
+                    <option value="4.5">4.5箱</option>
+                    <option value="5">5箱</option>
+                    <option value="5.5">5.5箱</option>
+                    <option value="6">6箱</option>
+                    <option value="6.5">6.5箱</option>
+                    <option value="7">7箱</option>
+                    <option value="7.5">7.5箱</option>
+                    <option value="8">8箱</option>
+                    <option value="8.5">8.5箱</option>
+                    <option value="9">9箱</option>
+                    <option value="9.5">9.5箱</option>
+                    <option value="10">10箱</option>
+                  </select>
                 </div>
               </div>
               
@@ -372,17 +389,102 @@ export default function OnboardingPage() {
                 </p>
               </div>
               
-              <button
-                onClick={nextStep}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-              >
-                次へ
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={prevStep}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  戻る
+                </button>
+                <button
+                  onClick={nextStep}
+                  className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+                >
+                  次へ
+                </button>
+              </div>
             </div>
           )}
 
-          {/* ステップ2: 返金・募金選択 */}
+          {/* ステップ2: 参加費設定 */}
           {step === 2 && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="text-4xl block mb-4">💰</span>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">参加費を設定してください</h2>
+                <p className="text-gray-600">
+                  月額タバコ代を基に推奨金額を算出しました
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  参加費（推奨: ¥{calculateMonthlyAmount().toLocaleString()}）
+                </label>
+                <select
+                  value={formData.participationFee}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    participationFee: parseInt(e.target.value) 
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="0">¥0</option>
+                  <option value="500">¥500</option>
+                  <option value="1000">¥1,000</option>
+                  <option value="1500">¥1,500</option>
+                  <option value="2000">¥2,000</option>
+                  <option value="2500">¥2,500</option>
+                  <option value="3000">¥3,000</option>
+                  <option value="3500">¥3,500</option>
+                  <option value="4000">¥4,000</option>
+                  <option value="4500">¥4,500</option>
+                  <option value="5000">¥5,000</option>
+                  <option value="6000">¥6,000</option>
+                  <option value="7000">¥7,000</option>
+                  <option value="8000">¥8,000</option>
+                  <option value="9000">¥9,000</option>
+                  <option value="10000">¥10,000</option>
+                  <option value="12000">¥12,000</option>
+                  <option value="15000">¥15,000</option>
+                  <option value="18000">¥18,000</option>
+                  <option value="20000">¥20,000</option>
+                  <option value="25000">¥25,000</option>
+                  <option value="30000">¥30,000</option>
+                  <option value="35000">¥35,000</option>
+                  <option value="40000">¥40,000</option>
+                  <option value="45000">¥45,000</option>
+                  <option value="50000">¥50,000</option>
+                </select>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-medium text-purple-900 mb-2">🐉 マネーモンスターの体力</h4>
+                <p className="text-purple-800 text-sm mb-3">
+                  参加費¥{formData.participationFee.toLocaleString()}が、マネーモンスターの体力となります。
+                  毎日の記録でダメージを与え、30日間で完全勝利を目指しましょう！
+                </p>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={prevStep}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  戻る
+                </button>
+                <button
+                  onClick={nextStep}
+                  className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+                >
+                  次へ
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ステップ3: 返金・募金選択 */}
+          {step === 3 && (
             <div className="space-y-6">
               <div className="text-center">
                 <span className="text-4xl block mb-4">💰</span>
@@ -414,12 +516,35 @@ export default function OnboardingPage() {
                       
                       <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
                         <p className="font-medium text-yellow-900 mb-1">⚠️ 手数料について</p>
-                        <p className="text-yellow-800">返金処理手数料として500円がかかります</p>
+                        <p className="text-yellow-800">
+                          {formData.participationFee === 0 
+                            ? '参加費0円の場合、手数料はかかりません'
+                            : formData.participationFee <= 500
+                            ? '参加費が500円以下の場合、返金額は0円となります'
+                            : '返金処理手数料として500円がかかります'
+                          }
+                        </p>
                         
                         <div className="mt-2 text-xs text-yellow-700">
-                          <p><strong>計算方法：</strong> （参加費 - 500円）× 記録日数 ÷ 30日</p>
-                          <p><strong>例：</strong> 参加費10,000円、20日記録した場合</p>
-                          <p>→ （10,000円 - 500円）× 20 ÷ 30 = <strong>6,333円が返金</strong></p>
+                          {formData.participationFee === 0 ? (
+                            <>
+                              <p><strong>計算方法：</strong> 0円（手数料なし）</p>
+                              <p><strong>例：</strong> 参加費0円、20日記録成功した場合</p>
+                              <p>→ <strong>0円が返金</strong>（手数料なし）</p>
+                            </>
+                          ) : formData.participationFee <= 500 ? (
+                            <>
+                              <p><strong>計算方法：</strong> 0円（参加費が500円以下）</p>
+                              <p><strong>例：</strong> 参加費{formData.participationFee}円、20日記録成功した場合</p>
+                              <p>→ <strong>0円が返金</strong></p>
+                            </>
+                          ) : (
+                            <>
+                              <p><strong>計算方法：</strong> （参加費 - 500円）× 記録成功日数 ÷ 30日</p>
+                              <p><strong>例：</strong> 参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</p>
+                              <p>→ （{formData.participationFee.toLocaleString()}円 - 500円）× 20 ÷ 30 = <strong>{Math.round((formData.participationFee - 500) * 20 / 30).toLocaleString()}円が返金</strong></p>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -452,9 +577,9 @@ export default function OnboardingPage() {
                         <p className="text-green-800">参加費の全額が寄付対象となります</p>
                         
                         <div className="mt-2 text-xs text-green-700">
-                          <p><strong>計算方法：</strong> 参加費 × 記録日数 ÷ 30日</p>
-                          <p><strong>例：</strong> 参加費10,000円、20日記録した場合</p>
-                          <p>→ 10,000円 × 20 ÷ 30 = <strong>6,667円を募金</strong></p>
+                          <p><strong>計算方法：</strong> 参加費 × 記録成功日数 ÷ 30日</p>
+                          <p><strong>例：</strong> 参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</p>
+                          <p>→ {formData.participationFee.toLocaleString()}円 × 20 ÷ 30 = <strong>{Math.round(formData.participationFee * 20 / 30).toLocaleString()}円を募金</strong></p>
                         </div>
                       </div>
                     </div>
@@ -465,91 +590,47 @@ export default function OnboardingPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-medium text-blue-900 mb-2">📋 重要なルール</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• 禁煙に成功した日も、失敗した日も、記録をつけることで「記録成功日」としてカウントされます</li>
-                  <li>• 記録をつけなかった日は、カウントされません</li>
-                  <li>• 30日間毎日記録をつけた場合、満額が返金または募金されます</li>
+                  <li>• 毎日記録をつけることで「記録成功日数」としてカウントされます</li>
+                  <li>• 禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます</li>
+                  <li>• チャレンジの途中放棄も可能ですが、参加費の返金はありません</li>
+                  <li>• 30日間毎日記録をつけた場合：
+                    {formData.payoutMethod === 'refund' ? (
+                      formData.participationFee > 500 
+                        ? ` 満額（参加費-500円）が返金されます`
+                        : ` 返金額は0円となります`
+                    ) : ` 満額（参加費）が募金されます`}
+                  </li>
                 </ul>
               </div>
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={prevStep}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-                >
-                  戻る
-                </button>
-                <button
-                  onClick={nextStep}
-                  className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-                >
-                  次へ
-                </button>
-              </div>
-            </div>
-          )}
 
-          {/* ステップ3: 参加費設定 */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <span className="text-4xl block mb-4">💰</span>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">参加費を設定してください</h2>
-                <p className="text-gray-600">
-                  {formData.payoutMethod === 'refund' 
-                    ? 'チャレンジ達成率に応じて返金されます（手数料500円を除く）' 
-                    : 'チャレンジ達成率に応じて募金されます'}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  参加費（推奨: ¥{calculateMonthlyAmount().toLocaleString()}）
-                </label>
-                <input
-                  type="range"
-                  min="1000"
-                  max="50000"
-                  step="100"
-                  value={formData.participationFee}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    participationFee: parseInt(e.target.value) 
-                  }))}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-500 mt-1">
-                  <span>¥1,000</span>
-                  <span className="font-medium">¥{formData.participationFee.toLocaleString()}</span>
-                  <span>¥50,000</span>
-                </div>
-              </div>
-
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h4 className="font-medium text-purple-900 mb-2">🐉 マネーモンスターの体力</h4>
-                <p className="text-purple-800 text-sm mb-3">
-                  参加費¥{formData.participationFee.toLocaleString()}が、マネーモンスターの体力となります。
-                  毎日の記録でダメージを与え、30日間で完全勝利を目指しましょう！
-                </p>
-                
-                {formData.payoutMethod === 'refund' && (
-                  <div className="bg-yellow-100 border border-yellow-200 rounded p-3 mt-3">
-                    <p className="text-yellow-800 text-sm">
-                      <strong>目標取り戻し金額:</strong> ¥{(formData.participationFee - 500).toLocaleString()}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">💡 目標金額</h4>
+                <p className="text-gray-700 text-sm">
+                  {formData.payoutMethod === 'refund' ? (
+                    <>
+                      <strong>目標取り戻し金額:</strong> ¥{
+                        formData.participationFee > 500 
+                          ? (formData.participationFee - 500).toLocaleString()
+                          : '0'
+                      }
                       <br />
-                      <span className="text-xs">（参加費 - 手数料500円）</span>
-                    </p>
-                  </div>
-                )}
-                
-                {formData.payoutMethod === 'donation' && (
-                  <div className="bg-green-100 border border-green-200 rounded p-3 mt-3">
-                    <p className="text-green-800 text-sm">
+                      <span className="text-xs text-gray-600">
+                        {formData.participationFee === 0 
+                          ? '（参加費0円のため手数料なし）'
+                          : formData.participationFee <= 500
+                          ? '（参加費が500円以下のため返金なし）'
+                          : '（参加費 - 手数料500円）'
+                        }
+                      </span>
+                    </>
+                  ) : (
+                    <>
                       <strong>目標募金額:</strong> ¥{formData.participationFee.toLocaleString()}
                       <br />
-                      <span className="text-xs">（参加費の全額）</span>
-                    </p>
-                  </div>
-                )}
+                      <span className="text-xs text-gray-600">（参加費の全額）</span>
+                    </>
+                  )}
+                </p>
               </div>
               
               <div className="flex space-x-3">
@@ -680,7 +761,7 @@ export default function OnboardingPage() {
           )}
 
           {/* ステップ5: 記録時間設定 */}
-          {(step === 5 || (step === 4 && formData.payoutMethod === 'donation')) && (
+          {step === 5 && (
             <div className="space-y-6">
               <div className="text-center">
                 <span className="text-4xl block mb-4">⏰</span>

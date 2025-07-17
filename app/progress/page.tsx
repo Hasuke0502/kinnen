@@ -1,8 +1,12 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 
 export default async function ProgressPage() {
+  // cookies()を呼び出してキャッシュから除外
+  await cookies()
+  
   const supabase = await createClient()
   
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -56,7 +60,20 @@ export default async function ProgressPage() {
   const remainingDays = Math.max(0, totalDays - elapsedDays)
   const achievementRate = totalDays > 0 ? (challenge.total_success_days / totalDays) * 100 : 0
   const currentSuccessRate = elapsedDays > 0 ? (challenge.total_success_days / elapsedDays) * 100 : 0
-  const donationAmount = Math.floor(profile.participation_fee * (challenge.total_success_days / totalDays))
+  
+  // 返金・募金額の計算
+  let payoutAmount = 0
+  if (profile.payout_method === 'refund') {
+    // 返金の場合：参加費が500円を超える場合のみ手数料を引いて計算
+    if (profile.participation_fee > 500) {
+      payoutAmount = Math.floor((profile.participation_fee - 500) * (challenge.total_success_days / totalDays))
+    } else {
+      payoutAmount = 0
+    }
+  } else {
+    // 募金の場合：参加費全額が対象
+    payoutAmount = Math.floor(profile.participation_fee * (challenge.total_success_days / totalDays))
+  }
 
   // カレンダー生成
   const generateCalendar = () => {
@@ -105,7 +122,7 @@ export default async function ProgressPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* 統計サマリー */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -124,7 +141,7 @@ export default async function ProgressPage() {
                   <span className="text-2xl">🚭</span>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">禁煙成功日</p>
+                  <p className="text-sm font-medium text-gray-500">記録成功日数</p>
                   <p className="text-2xl font-semibold text-gray-900">{challenge.total_success_days}日</p>
                 </div>
               </div>
@@ -148,8 +165,10 @@ export default async function ProgressPage() {
                   <span className="text-2xl">💰</span>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">募金予定額</p>
-                  <p className="text-2xl font-semibold text-gray-900">¥{donationAmount.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {profile.payout_method === 'refund' ? '返金予定額' : '募金予定額'}
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">¥{payoutAmount.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -190,14 +209,14 @@ export default async function ProgressPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-center space-x-6 text-sm">
+                <div className="flex flex-wrap gap-4 text-sm">
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-green-50 border-2 border-green-200 rounded mr-2"></div>
-                    <span>禁煙成功</span>
+                    <span>記録済み（禁煙）</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-red-50 border-2 border-red-200 rounded mr-2"></div>
-                    <span>喫煙</span>
+                    <span>記録済み（喫煙）</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-4 h-4 bg-yellow-50 border-2 border-yellow-200 rounded mr-2"></div>
@@ -233,22 +252,22 @@ export default async function ProgressPage() {
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-green-600">{challenge.total_success_days}</p>
-                      <p className="text-xs text-gray-600">成功日</p>
+                      <p className="text-xs text-gray-600">記録成功日数</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-red-600">{challenge.total_failed_days}</p>
-                      <p className="text-xs text-gray-600">失敗日</p>
+                      <p className="text-2xl font-bold text-orange-600">{challenge.total_failed_days}</p>
+                      <p className="text-xs text-gray-600">未記録日数</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* マネーモンスター状況 */}
-              <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-lg p-6 text-white">
+              <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-lg shadow p-6 text-white">
                 <h3 className="text-lg font-medium mb-4">🐉 マネーモンスター</h3>
                 <div className="text-center">
                   <p className="text-sm text-purple-200 mb-2">残り体力</p>
-                  <p className="text-xl font-bold mb-4">¥{(profile.participation_fee - donationAmount).toLocaleString()}</p>
+                  <p className="text-xl font-bold mb-4">¥{(profile.participation_fee - payoutAmount).toLocaleString()}</p>
                   
                   <div className="w-full bg-purple-800 rounded-full h-3 mb-4">
                     <div 
@@ -265,14 +284,22 @@ export default async function ProgressPage() {
 
               {/* 募金情報 */}
               <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">募金情報</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  {profile.payout_method === 'refund' ? '返金情報' : '募金情報'}
+                </h3>
                 <div className="space-y-3">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">¥{donationAmount.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">現在の募金予定額</p>
+                    <p className={`text-2xl font-bold ${
+                      profile.payout_method === 'refund' ? 'text-blue-600' : 'text-green-600'
+                    }`}>
+                      ¥{payoutAmount.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      現在の{profile.payout_method === 'refund' ? '返金' : '募金'}予定額
+                    </p>
                   </div>
                   
-                  {donationTarget && (
+                  {donationTarget && profile.payout_method === 'donation' && (
                     <div className="border-t pt-3">
                       <h4 className="font-medium text-gray-900">{donationTarget.name}</h4>
                       <p className="text-sm text-gray-600">{donationTarget.description}</p>
@@ -291,7 +318,14 @@ export default async function ProgressPage() {
                   
                   <div className="text-xs text-gray-500 pt-3 border-t">
                     <p>計算式:</p>
-                    <p>¥{profile.participation_fee.toLocaleString()} × ({challenge.total_success_days}/30) = ¥{donationAmount.toLocaleString()}</p>
+                    <p>
+                      {profile.payout_method === 'refund' 
+                        ? profile.participation_fee > 500
+                          ? `(¥${profile.participation_fee.toLocaleString()} - ¥500) × (${challenge.total_success_days}/30) = ¥${payoutAmount.toLocaleString()}`
+                          : '参加費が500円以下のため返金なし'
+                        : `¥${profile.participation_fee.toLocaleString()} × (${challenge.total_success_days}/30) = ¥${payoutAmount.toLocaleString()}`
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
@@ -324,7 +358,10 @@ export default async function ProgressPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium">
-                            {record.smoked ? '小ダメージ' : `¥${Math.floor(profile.participation_fee / 30).toLocaleString()}`}
+                            ¥{Math.floor(profile.participation_fee / 30).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            記録成功日数カウント
                           </p>
                           <p className="text-xs text-gray-500">
                             {new Date(record.created_at).toLocaleTimeString('ja-JP')}
