@@ -14,13 +14,6 @@ export default function DashboardNavigation() {
   return (
     <div className="flex items-center space-x-4">
       <Link
-        href="/progress"
-        className="text-indigo-600 hover:text-indigo-800 px-4 py-2 rounded-md text-sm font-medium"
-        onClick={handleLinkClick}
-      >
-        進捗詳細
-      </Link>
-      <Link
         href="/donations"
         className="text-green-600 hover:text-green-800 px-4 py-2 rounded-md text-sm font-medium"
         onClick={handleLinkClick}
