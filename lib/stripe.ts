@@ -1,7 +1,15 @@
 import Stripe from 'stripe'
 
+// Stripe Secret Keyの存在確認
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('❌ STRIPE_SECRET_KEY environment variable is not set!')
+  throw new Error('STRIPE_SECRET_KEY environment variable is required')
+}
+
+// console.log('🔧 Initializing Stripe with key:', process.env.STRIPE_SECRET_KEY.substring(0, 12) + '...')
+
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18',
+  apiVersion: '2024-06-20', // 正しいStripe APIバージョン
 })
 
 export interface PaymentIntent {
@@ -18,15 +26,17 @@ export async function createPaymentIntent(
   currency: string = 'jpy',
   metadata?: Record<string, string>
 ): Promise<PaymentIntent> {
+  console.log('🔧 Stripe createPaymentIntent called:', { amount, currency, metadata })
+  
   try {
+    console.log('🔧 Creating Stripe Payment Intent...')
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
       metadata,
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'], // カード決済のみに限定
     })
+    console.log('🔧 Stripe Payment Intent created successfully:', paymentIntent.id)
 
     return {
       id: paymentIntent.id,
@@ -36,8 +46,19 @@ export async function createPaymentIntent(
       client_secret: paymentIntent.client_secret!,
     }
   } catch (error) {
-    console.error('Failed to create payment intent:', error)
-    throw new Error('Payment intent creation failed')
+    console.error('🔧 Stripe createPaymentIntent error:', error)
+    console.error('🔧 Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      type: error instanceof Error ? error.constructor.name : typeof error
+    })
+    
+    // Stripeのエラーの場合、より詳細な情報を提供
+    if (error && typeof error === 'object' && 'type' in error) {
+      console.error('🔧 Stripe Error Type:', (error as any).type)
+      console.error('🔧 Stripe Error Code:', (error as any).code)
+    }
+    
+    throw new Error(`Payment intent creation failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

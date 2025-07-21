@@ -7,7 +7,7 @@ import Header from '@/components/Header'
 export default async function PaymentPage({
   searchParams,
 }: {
-  searchParams: { challenge_id?: string }
+  searchParams: Promise<{ challenge_id?: string }>
 }) {
   const supabase = await createClient()
   
@@ -16,7 +16,8 @@ export default async function PaymentPage({
     redirect('/auth/login')
   }
 
-  const challengeId = searchParams.challenge_id
+  const params = await searchParams
+  const challengeId = params.challenge_id
   if (!challengeId) {
     redirect('/dashboard')
   }

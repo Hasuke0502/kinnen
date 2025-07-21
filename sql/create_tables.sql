@@ -4,7 +4,7 @@ CREATE TABLE user_profiles (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   smoking_frequency TEXT NOT NULL CHECK (smoking_frequency IN ('daily', 'weekly', 'monthly')),
   smoking_amount DECIMAL(3,1) NOT NULL CHECK (smoking_amount > 0),
-  participation_fee INTEGER NOT NULL CHECK (participation_fee > 0),
+  participation_fee INTEGER NOT NULL CHECK (participation_fee >= 0),
   payout_method TEXT NOT NULL DEFAULT 'donation' CHECK (payout_method IN ('refund', 'donation')),
   donation_target_id UUID,
   record_time TIME NOT NULL,
@@ -25,6 +25,8 @@ CREATE TABLE challenges (
   achievement_rate DECIMAL(5,2) DEFAULT 0 NOT NULL,
   donation_amount INTEGER DEFAULT 0 NOT NULL,
   payment_intent_id TEXT,
+  payment_completed BOOLEAN DEFAULT false NOT NULL,
+  payment_completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

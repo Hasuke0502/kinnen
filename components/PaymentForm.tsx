@@ -1,7 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { loadStripe } from '@stripe/stripe-js'
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements
+} from '@stripe/react-stripe-js'
+
+// Stripe初期化
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface PaymentFormProps {
   amount: number
@@ -10,25 +20,26 @@ interface PaymentFormProps {
   onError?: (error: string) => void
 }
 
-export default function PaymentForm({ amount, challengeId, onSuccess, onError }: PaymentFormProps) {
+// 実際の決済フォームコンポーネント
+function CheckoutForm({ amount, challengeId, onSuccess, onError }: PaymentFormProps) {
+  const stripe = useStripe()
+  const elements = useElements()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [cardComplete, setCardComplete] = useState(false)
+  const [cardError, setCardError] = useState('')
 
-  const handlePayment = async () => {
-    setLoading(true)
-    setError('')
+  // Payment Intent作成
+  useEffect(() => {
+    if (amount > 0) {
+      createPaymentIntent()
+    }
+  }, [amount, challengeId])
 
+  const createPaymentIntent = async () => {
     try {
-      // 0円の場合は決済処理をスキップ
-      if (amount === 0) {
-        console.log('参加費が0円のため決済処理をスキップします')
-        onSuccess?.()
-        router.push('/dashboard?payment=free')
-        return
-      }
-
-      // 支払いインテントを作成
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: {
@@ -45,18 +56,79 @@ export default function PaymentForm({ amount, challengeId, onSuccess, onError }:
         throw new Error(errorData.error || '支払い処理に失敗しました')
       }
 
-      const { client_secret, payment_intent_id } = await response.json()
+      const { client_secret } = await response.json()
+      setClientSecret(client_secret)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '予期しないエラーが発生しました'
+      setError(errorMessage)
+      onError?.(errorMessage)
+    }
+  }
 
-      // 実際の本番環境では、ここでStripe Elements等を使用して決済処理を行う
-      // MVPとしては支払い完了として扱う
-      console.log('Payment intent created:', payment_intent_id)
-      
-      // デモ用：3秒後に成功とみなす
-      await new Promise(resolve => setTimeout(resolve, 3000))
+  // カード情報の変更を監視
+  const handleCardChange = (event: any) => {
+    console.log('🔍 Card Change Event:', {
+      complete: event.complete,
+      error: event.error?.message,
+      empty: event.empty
+    })
+    
+    if (event.error) {
+      setCardError(event.error.message)
+      setCardComplete(false)
+    } else {
+      setCardError('')
+      setCardComplete(event.complete)
+    }
+    
+    // デバッグ: ボタン状態確認
+    console.log('🔘 Button State Check:', {
+      loading,
+      stripe: !!stripe,
+      clientSecret: !!clientSecret,
+      cardComplete: event.complete,
+      cardError: !!event.error,
+      willBeDisabled: loading || !stripe || !clientSecret || !event.complete || !!event.error
+    })
+  }
 
-      onSuccess?.()
-      router.push('/dashboard?payment=success')
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    
+    if (!stripe || !elements) {
+      return
+    }
 
+    setLoading(true)
+    setError('')
+    setCardError('')
+
+    const cardElement = elements.getElement(CardElement)
+    if (!cardElement) {
+      setError('カード情報の入力が必要です')
+      setLoading(false)
+      return
+    }
+
+    try {
+      // 決済確認
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+          }
+        }
+      )
+
+      if (confirmError) {
+        setError(confirmError.message || '決済に失敗しました')
+        onError?.(confirmError.message || '決済に失敗しました')
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // 決済成功
+        onSuccess?.()
+        router.push('/dashboard?payment=success')
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '予期しないエラーが発生しました'
       setError(errorMessage)
@@ -64,6 +136,55 @@ export default function PaymentForm({ amount, challengeId, onSuccess, onError }:
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFreeParticipation = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: 0,
+          challengeId
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '参加登録に失敗しました')
+      }
+
+      onSuccess?.()
+      router.push('/dashboard?payment=free')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '予期しないエラーが発生しました'
+      setError(errorMessage)
+      onError?.(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#424770',
+        '::placeholder': {
+          color: '#aab7c4',
+        },
+      },
+      invalid: {
+        color: '#9e2146',
+      },
+    },
+    hidePostalCode: true, // 郵便番号（住所）入力フィールドを非表示
+    disableLink: true, // Link機能を無効化
   }
 
   return (
@@ -112,45 +233,102 @@ export default function PaymentForm({ amount, challengeId, onSuccess, onError }:
           </div>
         )}
 
-        <div className="space-y-3">
-          <button
-            onClick={handlePayment}
-            disabled={loading}
-            className={`w-full py-3 px-4 rounded-md font-medium disabled:opacity-50 transition-colors ${
-              amount === 0 
-                ? 'bg-green-600 text-white hover:bg-green-700' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                処理中...
+        {amount === 0 ? (
+          // 0円の場合
+          <div className="space-y-3">
+            <button
+              onClick={handleFreeParticipation}
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-md font-medium disabled:opacity-50 transition-colors bg-green-600 text-white hover:bg-green-700"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  処理中...
+                </div>
+              ) : (
+                '無料でチャレンジを開始'
+              )}
+            </button>
+
+            <p className="text-xs text-gray-600 text-center">
+              チャレンジの開始により、利用規約に同意したものとみなされます
+            </p>
+          </div>
+        ) : (
+          // 有料の場合
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                カード情報
+              </label>
+              <div className={`p-3 border rounded-md transition-colors ${
+                cardError 
+                  ? 'border-red-300 focus-within:ring-red-500 focus-within:border-red-500'
+                  : cardComplete
+                  ? 'border-green-300 focus-within:ring-green-500 focus-within:border-green-500'
+                  : 'border-gray-300 focus-within:ring-indigo-500 focus-within:border-indigo-500'
+              }`}>
+                <CardElement 
+                  options={cardElementOptions} 
+                  onChange={handleCardChange}
+                />
               </div>
-            ) : amount === 0 ? (
-              '無料でチャレンジを開始'
-            ) : (
-              `¥${amount.toLocaleString()}を支払ってチャレンジを開始`
-            )}
-          </button>
+              {cardError && (
+                <p className="mt-1 text-sm text-red-600">{cardError}</p>
+              )}
+              {cardComplete && !cardError && (
+                <p className="mt-1 text-sm text-green-600">✅ カード情報が正常に入力されました</p>
+              )}
+            </div>
 
-          <p className="text-xs text-gray-600 text-center">
-            {amount === 0 
-              ? 'チャレンジの開始により、利用規約に同意したものとみなされます'
-              : 'お支払いにより、利用規約と返金ポリシーに同意したものとみなされます'
-            }
-          </p>
-        </div>
+            <div className="space-y-3">
+              <button
+                type="submit"
+                disabled={loading || !stripe || !clientSecret || !cardComplete || !!cardError}
+                className={`w-full py-3 px-4 rounded-md font-medium transition-all duration-200 ${
+                  loading || !stripe || !clientSecret || !cardComplete || !!cardError
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-50'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg transform hover:scale-[1.02]'
+                }`}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    処理中...
+                  </div>
+                ) : !cardComplete ? (
+                  'カード情報を入力してください'
+                ) : cardError ? (
+                  'カード情報を確認してください'
+                ) : (
+                  `¥${amount.toLocaleString()}を支払ってチャレンジを開始`
+                )}
+              </button>
 
-        {/* デモ用の注意書き */}
-        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-          <h4 className="font-medium text-yellow-900 mb-2">🚧 デモ版について</h4>
-          <p className="text-sm text-yellow-800">
-            これはデモ版です。実際の決済は行われません。
-            本番環境では、Stripe Elementsを使用した安全な決済フォームが表示されます。
+              <p className="text-xs text-gray-600 text-center">
+                お支払いにより、利用規約と返金ポリシーに同意したものとみなされます
+              </p>
+            </div>
+          </form>
+        )}
+
+        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+          <h4 className="font-medium text-green-900 mb-2">🔒 安全な決済</h4>
+          <p className="text-sm text-green-800">
+            このサイトはStripeによって保護されています。クレジットカード情報は暗号化され、安全に処理されます。
           </p>
         </div>
       </div>
     </div>
+  )
+}
+
+// メインのPaymentFormコンポーネント
+export default function PaymentForm(props: PaymentFormProps) {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutForm {...props} />
+    </Elements>
   )
 } 

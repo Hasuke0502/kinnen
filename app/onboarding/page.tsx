@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { SoundButton, useSoundManager } from '@/components/SoundManager'
 
 interface DonationTarget {
   id: string
@@ -15,6 +16,7 @@ interface DonationTarget {
 export default function OnboardingPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { playClickSound } = useSoundManager()
   
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -126,24 +128,32 @@ export default function OnboardingPage() {
   }, [formData.smokingFrequency, formData.smokingAmount])
 
   const handleSubmit = async () => {
+    console.log('🚀 チャレンジ開始ボタンが押されました')
     setLoading(true)
     setError('')
     
     try {
+      console.log('1️⃣ ユーザー認証確認中...')
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
+        console.log('❌ ユーザー認証失敗')
         setError('ユーザー認証が必要です')
         router.push('/auth/login')
         return
       }
+      console.log('✅ ユーザー認証成功:', user.email)
 
       // バリデーション
+      console.log('2️⃣ バリデーション確認中...')
       if (formData.payoutMethod === 'donation' && !formData.donationTargetId) {
+        console.log('❌ 募金先未選択')
         setError('募金先を選択してください')
         return
       }
+      console.log('✅ バリデーション成功')
 
-      console.log('プロファイル作成データ:', {
+      console.log('3️⃣ プロファイル作成データ準備中...')
+      const profileData = {
         user_id: user.id,
         smoking_frequency: formData.smokingFrequency,
         smoking_amount: formData.smokingAmount,
@@ -151,31 +161,26 @@ export default function OnboardingPage() {
         payout_method: formData.payoutMethod,
         donation_target_id: formData.payoutMethod === 'donation' ? formData.donationTargetId : null,
         record_time: formData.recordTime
-      })
+      }
+      console.log('📋 プロファイル作成データ:', profileData)
 
       // ユーザープロファイルの作成
-      const { data: profileData, error: profileError } = await supabase
+      console.log('4️⃣ プロファイル作成実行中...')
+      const { data: createdProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          user_id: user.id,
-          smoking_frequency: formData.smokingFrequency,
-          smoking_amount: formData.smokingAmount,
-          participation_fee: formData.participationFee,
-          payout_method: formData.payoutMethod,
-          donation_target_id: formData.payoutMethod === 'donation' ? formData.donationTargetId : null,
-          record_time: formData.recordTime
-        })
+        .insert(profileData)
         .select()
 
       if (profileError) {
-        console.error('プロファイル作成エラー:', profileError)
+        console.error('❌ プロファイル作成エラー:', profileError)
         setError(`プロファイル作成エラー: ${profileError.message}`)
         return
       }
 
-      console.log('プロファイル作成成功:', profileData)
+      console.log('✅ プロファイル作成成功:', createdProfile)
 
       // チャレンジの作成
+      console.log('5️⃣ チャレンジ作成準備中...')
       const startDate = new Date()
       const endDate = new Date(startDate)
       endDate.setDate(endDate.getDate() + 30)
@@ -187,33 +192,38 @@ export default function OnboardingPage() {
         status: 'active' as const
       }
 
-      console.log('チャレンジ作成データ:', challengeData)
+      console.log('📋 チャレンジ作成データ:', challengeData)
 
+      console.log('6️⃣ チャレンジ作成実行中...')
       const { data: challengeResult, error: challengeError } = await supabase
         .from('challenges')
         .insert(challengeData)
         .select()
 
       if (challengeError) {
-        console.error('チャレンジ作成エラー:', challengeError)
+        console.error('❌ チャレンジ作成エラー:', challengeError)
         setError(`チャレンジ作成エラー: ${challengeError.message}`)
         return
       }
 
-      console.log('チャレンジ作成成功:', challengeResult)
+      console.log('✅ チャレンジ作成成功:', challengeResult)
 
       // 参加費が0円の場合は決済をスキップしてダッシュボードへ
+      console.log('7️⃣ 遷移先決定中...')
       if (formData.participationFee === 0) {
+        console.log('💰 0円参加 → ダッシュボードへ遷移')
         router.push('/dashboard?setup=complete')
       } else {
-        // 参加費がある場合は決済ページへ
+        console.log('💳 有料参加 → 決済ページへ遷移')
         router.push(`/payment?challenge_id=${challengeResult[0].id}`)
       }
+      console.log('🎉 処理完了！')
     } catch (error) {
-      console.error('予期しないエラー:', error)
+      console.error('💥 予期しないエラー:', error)
       setError(`予期しないエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setLoading(false)
+      console.log('🏁 handleSubmit処理終了')
     }
   }
 
@@ -235,6 +245,20 @@ export default function OnboardingPage() {
     } else {
       setStep(step - 1)
     }
+  }
+
+  const handleSelectChange = (callback: () => void) => {
+    playClickSound()
+    callback()
+  }
+
+  const handleRadioClick = (callback: () => void) => {
+    playClickSound()
+    callback()
+  }
+
+  const handleRefreshRecommendations = () => {
+    refreshRecommendations()
   }
 
   return (
@@ -314,12 +338,12 @@ export default function OnboardingPage() {
                 </ul>
               </div>
 
-              <button
+              <SoundButton
                 onClick={nextStep}
                 className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md text-lg font-medium hover:bg-indigo-700 transition-colors"
               >
                 マネーモンスターとの戦いを始める 🚀
-              </button>
+              </SoundButton>
             </div>
           )}
 
@@ -337,10 +361,10 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">頻度</label>
                   <select
                     value={formData.smokingFrequency}
-                    onChange={(e) => setFormData(prev => ({ 
+                    onChange={(e) => handleSelectChange(() => setFormData(prev => ({ 
                       ...prev, 
                       smokingFrequency: e.target.value as 'daily' | 'weekly' | 'monthly' 
-                    }))}
+                    })))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="daily">1日</option>
@@ -353,10 +377,10 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">箱数</label>
                   <select
                     value={formData.smokingAmount}
-                    onChange={(e) => setFormData(prev => ({ 
+                    onChange={(e) => handleSelectChange(() => setFormData(prev => ({ 
                       ...prev, 
                       smokingAmount: parseFloat(e.target.value) 
-                    }))}
+                    })))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="0.5">0.5箱</option>
@@ -390,18 +414,18 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <button
+                <SoundButton
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </button>
-                <button
+                </SoundButton>
+                <SoundButton
                   onClick={nextStep}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
                 >
                   次へ
-                </button>
+                </SoundButton>
               </div>
             </div>
           )}
@@ -423,10 +447,10 @@ export default function OnboardingPage() {
                 </label>
                 <select
                   value={formData.participationFee}
-                  onChange={(e) => setFormData(prev => ({ 
+                  onChange={(e) => handleSelectChange(() => setFormData(prev => ({ 
                     ...prev, 
                     participationFee: parseInt(e.target.value) 
-                  }))}
+                  })))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="0">¥0</option>
@@ -467,18 +491,18 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <button
+                <SoundButton
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </button>
-                <button
+                </SoundButton>
+                <SoundButton
                   onClick={nextStep}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
                 >
                   次へ
-                </button>
+                </SoundButton>
               </div>
             </div>
           )}
@@ -499,7 +523,7 @@ export default function OnboardingPage() {
                       ? 'border-indigo-500 bg-indigo-50' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => setFormData(prev => ({ ...prev, payoutMethod: 'refund' }))}
+                  onClick={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'refund' })))}
                 >
                   <div className="flex items-start space-x-3">
                     <input
@@ -507,7 +531,7 @@ export default function OnboardingPage() {
                       name="payoutMethod"
                       value="refund"
                       checked={formData.payoutMethod === 'refund'}
-                      onChange={() => setFormData(prev => ({ ...prev, payoutMethod: 'refund' }))}
+                      onChange={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'refund' })))}
                       className="mt-1"
                     />
                     <div className="flex-1">
@@ -557,7 +581,7 @@ export default function OnboardingPage() {
                       ? 'border-indigo-500 bg-indigo-50' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => setFormData(prev => ({ ...prev, payoutMethod: 'donation' }))}
+                  onClick={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'donation' })))}
                 >
                   <div className="flex items-start space-x-3">
                     <input
@@ -565,7 +589,7 @@ export default function OnboardingPage() {
                       name="payoutMethod"
                       value="donation"
                       checked={formData.payoutMethod === 'donation'}
-                      onChange={() => setFormData(prev => ({ ...prev, payoutMethod: 'donation' }))}
+                      onChange={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'donation' })))}
                       className="mt-1"
                     />
                     <div className="flex-1">
@@ -634,18 +658,18 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <button
+                <SoundButton
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </button>
-                <button
+                </SoundButton>
+                <SoundButton
                   onClick={nextStep}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
                 >
                   次へ
-                </button>
+                </SoundButton>
               </div>
             </div>
           )}
@@ -663,13 +687,13 @@ export default function OnboardingPage() {
                   {totalTargetsCount}の寄付先から厳選した6つをご紹介
                 </p>
                 <div className="mt-3 flex justify-center">
-                  <button
-                    onClick={refreshRecommendations}
+                  <SoundButton
+                    onClick={handleRefreshRecommendations}
                     disabled={isLoadingTargets}
                     className="inline-flex items-center px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
                   >
                     🔄 別の寄付先を提案
-                  </button>
+                  </SoundButton>
                 </div>
               </div>
               
@@ -682,12 +706,12 @@ export default function OnboardingPage() {
                 ) : donationTargets.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     利用可能な募金先がありません。
-                    <button
-                      onClick={refreshRecommendations}
+                    <SoundButton
+                      onClick={handleRefreshRecommendations}
                       className="ml-2 text-indigo-600 hover:underline"
                     >
                       再読み込み
-                    </button>
+                    </SoundButton>
                   </div>
                 ) : (
                   donationTargets.map((target) => (
@@ -698,16 +722,20 @@ export default function OnboardingPage() {
                           ? 'border-indigo-500 bg-indigo-50'
                           : 'border-gray-300 hover:border-gray-400'
                       }`}
+                      onClick={() => handleRadioClick(() => setFormData(prev => ({ 
+                        ...prev, 
+                        donationTargetId: target.id 
+                      })))}
                     >
                       <input
                         type="radio"
                         name="donationTarget"
                         value={target.id}
                         checked={formData.donationTargetId === target.id}
-                        onChange={(e) => setFormData(prev => ({ 
+                        onChange={(e) => handleRadioClick(() => setFormData(prev => ({ 
                           ...prev, 
                           donationTargetId: e.target.value 
-                        }))}
+                        })))}
                         className="sr-only"
                       />
                       <div className="flex items-start justify-between">
@@ -717,8 +745,7 @@ export default function OnboardingPage() {
                         </div>
                         <div className="flex items-center space-x-2 ml-4">
                           {target.website_url && (
-                            <button
-                              type="button"
+                            <SoundButton
                               onClick={(e) => {
                                 e.preventDefault()
                                 window.open(target.website_url, '_blank')
@@ -726,7 +753,7 @@ export default function OnboardingPage() {
                               className="text-xs text-blue-600 hover:text-blue-800 border border-blue-300 rounded px-2 py-1"
                             >
                               詳細
-                            </button>
+                            </SoundButton>
                           )}
                           {formData.donationTargetId === target.id && (
                             <span className="text-indigo-600 text-lg">✓</span>
@@ -743,19 +770,19 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <button
+                <SoundButton
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </button>
-                <button
+                </SoundButton>
+                <SoundButton
                   onClick={nextStep}
                   disabled={!formData.donationTargetId}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 >
                   次へ
-                </button>
+                </SoundButton>
               </div>
             </div>
           )}
@@ -774,10 +801,10 @@ export default function OnboardingPage() {
                 <input
                   type="time"
                   value={formData.recordTime}
-                  onChange={(e) => setFormData(prev => ({ 
+                  onChange={(e) => handleSelectChange(() => setFormData(prev => ({ 
                     ...prev, 
                     recordTime: e.target.value 
-                  }))}
+                  })))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>

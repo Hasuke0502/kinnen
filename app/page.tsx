@@ -29,24 +29,27 @@ export default async function Home() {
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-white/20">
             <h2 className="text-2xl font-bold text-white mb-4">🐉 マネーモンスターとの戦い</h2>
             <p className="text-gray-300 mb-6">
-              あなたが喫煙によって失った大切なお金と健康は、マネーモンスターたちに奪われていました。
-              毎日の記録でモンスターにダメージを与え、30日間で完全勝利を目指しましょう！
+              タバコの煙から生まれた悪しき存在「マネーモンスター」があなたのお金を奪っています！
+              毎日記録をつけるだけでモンスターにダメージを与え、お金を取り戻すことができます。
+              <span className="block mt-2 text-yellow-300 font-semibold">
+                禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます！
+              </span>
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="bg-white/10 rounded-lg p-4">
                 <span className="text-2xl block mb-2">💰</span>
                 <h3 className="font-semibold text-white">金銭的インセンティブ</h3>
-                <p className="text-gray-300">達成率に応じた募金で社会貢献</p>
+                <p className="text-gray-300">達成率に応じて返金受取または募金で社会貢献を選択</p>
               </div>
               <div className="bg-white/10 rounded-lg p-4">
                 <span className="text-2xl block mb-2">🎮</span>
                 <h3 className="font-semibold text-white">ゲーム性</h3>
-                <p className="text-gray-300">RPG風のストーリーで楽しく継続</p>
+                <p className="text-gray-300">マネーモンスターを倒してお金を取り戻すRPG風ストーリー</p>
               </div>
               <div className="bg-white/10 rounded-lg p-4">
                 <span className="text-2xl block mb-2">📊</span>
-                <h3 className="font-semibold text-white">進捗トラッキング</h3>
-                <p className="text-gray-300">30日間の詳細な記録と分析</p>
+                <h3 className="font-semibold text-white">簡単な記録システム</h3>
+                <p className="text-gray-300">記録するだけで成功！30日間の進捗を視覚的に確認</p>
               </div>
             </div>
           </div>
@@ -57,12 +60,6 @@ export default async function Home() {
               className="w-full sm:w-auto flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
             >
               冒険を始める
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="w-full sm:w-auto flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10"
-            >
-              仕組みを見る
             </Link>
           </div>
         </div>
@@ -86,7 +83,7 @@ export default async function Home() {
                 </div>
                 <h3 className="mt-6 text-lg leading-6 font-medium text-gray-900">設定</h3>
                 <p className="mt-2 text-base text-gray-500">
-                  喫煙状況と参加費を設定し、募金先を選択
+                  喫煙状況と参加費（0円も可能）を設定し、返金か募金かを選択
                 </p>
               </div>
 
@@ -96,7 +93,7 @@ export default async function Home() {
                 </div>
                 <h3 className="mt-6 text-lg leading-6 font-medium text-gray-900">毎日記録</h3>
                 <p className="mt-2 text-base text-gray-500">
-                  30日間、毎日の禁煙状況を記録してモンスターと戦う
+                  30日間、記録をつけるだけでOK！禁煙した日も吸った日も成功日にカウント
                 </p>
               </div>
 
@@ -106,7 +103,7 @@ export default async function Home() {
                 </div>
                 <h3 className="mt-6 text-lg leading-6 font-medium text-gray-900">進捗確認</h3>
                 <p className="mt-2 text-base text-gray-500">
-                  リアルタイムで達成率と募金予定額を確認
+                  マネーモンスターとの戦いを可視化！取り戻し予定額をリアルタイム表示
                 </p>
               </div>
 
@@ -114,9 +111,9 @@ export default async function Home() {
                 <div className="flex items-center justify-center h-16 w-16 rounded-md bg-indigo-500 text-white text-2xl mx-auto">
                   4️⃣
                 </div>
-                <h3 className="mt-6 text-lg leading-6 font-medium text-gray-900">社会貢献</h3>
+                <h3 className="mt-6 text-lg leading-6 font-medium text-gray-900">結果</h3>
                 <p className="mt-2 text-base text-gray-500">
-                  達成率に応じて選んだ団体に募金され、証明書を確認
+                  達成率に応じて返金を受取、または選んだ団体への募金で社会貢献
                 </p>
               </div>
             </div>

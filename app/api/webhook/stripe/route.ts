@@ -58,12 +58,13 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, supabas
       return
     }
 
-    // チャレンジの状態を更新（支払い完了を記録）
+    // チャレンジの状態を更新（支払い完了を記録し、アクティブ状態に変更）
     const { error: updateError } = await supabase
       .from('challenges')
       .update({ 
         payment_completed: true,
-        payment_completed_at: new Date().toISOString()
+        payment_completed_at: new Date().toISOString(),
+        status: 'active'
       })
       .eq('id', challengeId)
       .eq('user_id', userId)
