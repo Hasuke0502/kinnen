@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useSoundManager, SoundButton } from './SoundManager'
 import { logout } from '@/app/auth/actions'
 
 interface HeaderProps {
@@ -22,17 +21,13 @@ export default function Header({
   backLabel = 'ダッシュボード' 
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { playClickSound } = useSoundManager()
   const pathname = usePathname()
 
   const handleMenuToggle = () => {
-    playClickSound()
     setIsMenuOpen(!isMenuOpen)
   }
 
   const handleLinkClick = (item?: { isScrollLink?: boolean; href: string }) => {
-    playClickSound()
-    setIsMenuOpen(false) // メニューを閉じる
     
     // スクロールリンクの場合の処理
     if (item?.isScrollLink && item.href.includes('#')) {
@@ -142,12 +137,12 @@ export default function Header({
               ))}
               
               <form action={logout} className="ml-2">
-                <SoundButton
+                <button
                   type="submit"
                   className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   ログアウト
-                </SoundButton>
+                </button>
               </form>
             </div>
           </nav>
@@ -216,13 +211,13 @@ export default function Header({
             
             <div className="pt-2 border-t border-gray-200">
               <form action={logout}>
-                <SoundButton
+                <button
                   type="submit"
                   className="w-full flex items-center px-3 py-3 rounded-md text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
                 >
                   <span className="mr-3 text-lg">🚪</span>
                   ログアウト
-                </SoundButton>
+                </button>
               </form>
             </div>
           </div>

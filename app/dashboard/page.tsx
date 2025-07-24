@@ -3,8 +3,42 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import MoneyMonster from '@/components/MoneyMonster'
 import Header from '@/components/Header'
+import { revalidatePath } from 'next/cache'
 
 import { cookies } from 'next/headers'
+
+// Server Actions
+async function restartChallenge() {
+  'use server'
+  
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    redirect('/auth/login')
+  }
+
+  // 現在のアクティブなチャレンジを完了状態に更新
+  const { error: updateError } = await supabase
+    .from('challenges')
+    .update({ status: 'completed' })
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+
+  if (updateError) {
+    console.error('チャレンジ更新エラー:', updateError)
+  }
+
+  revalidatePath('/dashboard')
+  redirect('/onboarding')
+}
+
+async function finishChallenge() {
+  'use server'
+  
+  revalidatePath('/dashboard')
+  redirect('/dashboard?message=30日間のチャレンジお疲れ様でした！またのチャレンジをお待ちしております。')
+}
 
 export default async function DashboardPage({
   searchParams
@@ -79,23 +113,41 @@ export default async function DashboardPage({
   const endDate = new Date(challenge.end_date)
   const currentDate = new Date()
   const totalDays = 30
-  const elapsedDays = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-  const remainingDays = Math.max(0, totalDays - elapsedDays)
-  const achievementRate = totalDays > 0 ? (challenge.total_success_days / totalDays) * 100 : 0
-  const currentSuccessRate = elapsedDays > 0 ? (challenge.total_success_days / elapsedDays) * 100 : 0
+  
+  // 経過日数の計算を修正：初日は0日経過、+1は不要
+  const elapsedDays = Math.max(0, Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+  
+  // 現在何日目かを計算（1日目、2日目...）
+  const currentDay = elapsedDays + 1
+  const remainingDays = Math.max(0, totalDays - currentDay)
+  
+  // チャレンジ完了判定
+  const isChallengeCompleted = challenge.status === 'completed' || currentDate >= endDate
+  
+  // 実際の記録データから記録成功日数を計算（より正確）
+  const actualSuccessDays = records ? records.length : 0
+  
+  // ゲーム完了判定（30日経過 OR 30日分の記録が完了）
+  const isGameCompleted = isChallengeCompleted || actualSuccessDays >= 30
+  
+  // 未記録日数 = 現在何日目か - 記録成功日数（初日に記録がない場合は0になる）
+  const unrecordedDays = Math.max(0, currentDay - actualSuccessDays)
+  
+  const achievementRate = totalDays > 0 ? (actualSuccessDays / totalDays) * 100 : 0
+  const currentSuccessRate = currentDay > 0 ? (actualSuccessDays / currentDay) * 100 : 0
   
   // 返金・募金額の計算
   let payoutAmount = 0
   if (profile.payout_method === 'refund') {
     // 返金の場合：参加費が500円を超える場合のみ手数料を引いて計算
     if (profile.participation_fee > 500) {
-      payoutAmount = Math.floor((profile.participation_fee - 500) * (challenge.total_success_days / totalDays))
+      payoutAmount = Math.floor((profile.participation_fee - 500) * (actualSuccessDays / totalDays))
     } else {
       payoutAmount = 0
     }
   } else {
     // 募金の場合：参加費全額が対象
-    payoutAmount = Math.floor(profile.participation_fee * (challenge.total_success_days / totalDays))
+    payoutAmount = Math.floor(profile.participation_fee * (actualSuccessDays / totalDays))
   }
   
   const remainingAmount = profile.participation_fee - (profile.payout_method === 'donation' ? payoutAmount : (profile.participation_fee > 500 ? payoutAmount + 500 : payoutAmount))
@@ -161,7 +213,7 @@ export default async function DashboardPage({
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">記録成功日数</p>
-                  <p className="text-2xl font-semibold text-gray-900">{challenge.total_success_days}日</p>
+                  <p className="text-2xl font-semibold text-gray-900">{actualSuccessDays}日</p>
                 </div>
               </div>
             </div>
@@ -201,46 +253,51 @@ export default async function DashboardPage({
                 totalAmount={profile.participation_fee}
                 remainingAmount={remainingAmount}
                 achievementRate={achievementRate}
-                totalSuccessDays={challenge.total_success_days}
-                totalFailedDays={challenge.total_failed_days}
+                totalSuccessDays={actualSuccessDays}
+                totalFailedDays={unrecordedDays}
+                isGameCompleted={isGameCompleted}
+                onRestartChallenge={restartChallenge}
+                onFinishChallenge={finishChallenge}
               />
 
               {/* 今日の記録 */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">今日の記録</h3>
-                
-                {todayRecord ? (
-                  <div className="text-center">
-                    <span className="text-4xl block mb-4">
-                      {todayRecord.smoked ? '😔' : '🎉'}
-                    </span>
-                    <p className="text-lg font-medium">
-                      {todayRecord.smoked ? '今日は喫煙してしまいました' : '今日は禁煙成功！'}
-                    </p>
-                    {todayRecord.smoked && todayRecord.countermeasure && (
-                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          <strong>明日への対策:</strong> {todayRecord.countermeasure}
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-500 mt-4">
-                      記録済み: {new Date(todayRecord.created_at).toLocaleString('ja-JP')}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <span className="text-4xl block mb-4">❓</span>
-                    <p className="text-lg font-medium mb-4">今日の記録をつけましょう</p>
-                    <Link
-                      href="/record"
-                      className="bg-indigo-600 text-white px-6 py-2 rounded-md font-medium hover:bg-indigo-700 inline-block"
-                    >
-                      記録をつける
-                    </Link>
-                  </div>
-                )}
-              </div>
+              {!isGameCompleted && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">今日の記録</h3>
+                  
+                  {todayRecord ? (
+                    <div className="text-center">
+                      <span className="text-4xl block mb-4">
+                        {todayRecord.smoked ? '😔' : '🎉'}
+                      </span>
+                      <p className="text-lg font-medium">
+                        {todayRecord.smoked ? '今日は喫煙してしまいました' : '今日は禁煙成功！'}
+                      </p>
+                      {todayRecord.smoked && todayRecord.countermeasure && (
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>明日への対策:</strong> {todayRecord.countermeasure}
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-sm text-gray-500 mt-4">
+                        記録済み: {new Date(todayRecord.created_at).toLocaleString('ja-JP')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <span className="text-4xl block mb-4">❓</span>
+                      <p className="text-lg font-medium mb-4">今日の記録をつけましょう</p>
+                      <Link
+                        href="/record"
+                        className="bg-indigo-600 text-white px-6 py-2 rounded-md font-medium hover:bg-indigo-700 inline-block"
+                      >
+                        記録をつける
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 30日間カレンダー */}
               <div className="bg-white rounded-lg shadow p-6">
@@ -317,11 +374,11 @@ export default async function DashboardPage({
                   
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">{challenge.total_success_days}</p>
+                      <p className="text-2xl font-bold text-green-600">{actualSuccessDays}</p>
                       <p className="text-xs text-gray-600">記録成功日数</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-600">{challenge.total_failed_days}</p>
+                      <p className="text-2xl font-bold text-orange-600">{unrecordedDays}</p>
                       <p className="text-xs text-gray-600">未記録日数</p>
                     </div>
                   </div>

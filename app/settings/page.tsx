@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import NotificationSettings from '@/components/NotificationSettings'
-import SoundSettings from '@/components/SoundSettings'
+import ContactForm from '@/components/ContactForm'
 import Header from '@/components/Header'
 
 export default async function SettingsPage() {
@@ -49,14 +49,11 @@ export default async function SettingsPage() {
         backLabel="ダッシュボード"
       />
 
-      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {/* 通知設定 */}
             <NotificationSettings defaultRecordTime={profile.record_time} />
-
-            {/* 音響効果設定 */}
-            <SoundSettings />
 
             {/* チャレンジ設定 */}
             <div className="bg-white rounded-lg shadow p-6">
@@ -134,7 +131,7 @@ export default async function SettingsPage() {
 
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    💡 アカウント情報の変更については、サポートまでお問い合わせください。
+                    💡 アカウント情報の変更については、下記のお問い合わせフォームよりご連絡ください。
                   </p>
                 </div>
               </div>
@@ -153,26 +150,17 @@ export default async function SettingsPage() {
                   </ul>
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900 mb-2">データのエクスポート</p>
-                  <p className="text-xs text-gray-600 mb-2">
-                    あなたの記録データをエクスポートできます
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    💡 データの取り扱いについてご質問がある場合は、お問い合わせフォームよりご連絡ください。
                   </p>
-                  <button className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700">
-                    データをエクスポート
-                  </button>
-                </div>
-
-                <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-sm font-medium text-red-900 mb-2">アカウント削除</p>
-                  <p className="text-xs text-red-700 mb-2">
-                    アカウントを削除すると、すべてのデータが永久に削除されます
-                  </p>
-                  <button className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">
-                    アカウントを削除
-                  </button>
                 </div>
               </div>
+            </div>
+
+            {/* お問い合わせフォーム */}
+            <div className="lg:col-span-2 xl:col-span-3">
+              <ContactForm userEmail={user.email || ''} />
             </div>
           </div>
 

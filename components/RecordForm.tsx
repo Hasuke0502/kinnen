@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { SoundButton, useSoundManager } from './SoundManager'
 import { submitRecord } from '@/app/record/actions'
 
 interface RecordFormProps {
@@ -11,10 +10,8 @@ interface RecordFormProps {
 export default function RecordForm({ dailyDamage }: RecordFormProps) {
   const [selectedValue, setSelectedValue] = useState<string>('')
   const [showCountermeasure, setShowCountermeasure] = useState(false)
-  const { playClickSound } = useSoundManager()
 
   const handleRadioChange = (value: string) => {
-    playClickSound()
     setSelectedValue(value)
     setShowCountermeasure(value === 'true')
   }
@@ -108,12 +105,12 @@ export default function RecordForm({ dailyDamage }: RecordFormProps) {
 
       {/* 送信ボタン */}
       <div className="text-center">
-        <SoundButton
+        <button
           type="submit"
           className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
         >
           記録する
-        </SoundButton>
+        </button>
       </div>
 
       {/* 想定されるダメージ表示 */}

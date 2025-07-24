@@ -79,13 +79,6 @@ export default function NotificationSettings({ defaultRecordTime = '20:00' }: No
     })
   }
 
-  const sendTestNotification = () => {
-    sendLocalNotification('📝 テスト通知', {
-      body: 'これは通知のテストです。記録の時間になったらこのような通知が届きます。',
-      tag: 'test-notification'
-    })
-  }
-
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-medium text-gray-900 mb-4">🔔 通知設定</h3>
@@ -147,16 +140,6 @@ export default function NotificationSettings({ defaultRecordTime = '20:00' }: No
               毎日この時間に記録を促す通知が届きます
             </p>
           </div>
-        )}
-
-        {/* テスト通知ボタン */}
-        {permission.granted && (
-          <button
-            onClick={sendTestNotification}
-            className="w-full bg-gray-600 text-white py-2 px-4 rounded-md text-sm hover:bg-gray-700"
-          >
-            テスト通知を送信
-          </button>
         )}
 
         {/* 注意事項 */}

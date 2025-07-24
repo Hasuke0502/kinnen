@@ -113,3 +113,39 @@ export function convertFromStripeAmount(amount: number, currency: string = 'jpy'
   
   return amount / 100
 } 
+
+// 返金処理
+export async function createRefund(
+  paymentIntentId: string,
+  amount?: number
+): Promise<{ id: string; amount: number; status: string }> {
+  console.log('🔧 Stripe createRefund called:', { paymentIntentId, amount })
+  
+  try {
+    console.log('🔧 Creating Stripe Refund...')
+    const refund = await stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      ...(amount && { amount }),
+      metadata: {
+        refund_reason: 'challenge_completion',
+        processed_at: new Date().toISOString()
+      }
+    })
+    console.log('🔧 Stripe Refund created successfully:', refund.id)
+
+    return {
+      id: refund.id,
+      amount: refund.amount,
+      status: refund.status,
+    }
+  } catch (error) {
+    console.error('🔧 Stripe createRefund error:', error)
+    
+    if (error && typeof error === 'object' && 'type' in error) {
+      console.error('🔧 Stripe Error Type:', (error as any).type)
+      console.error('🔧 Stripe Error Code:', (error as any).code)
+    }
+    
+    throw new Error(`Refund creation failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+} 

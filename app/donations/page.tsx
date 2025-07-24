@@ -282,7 +282,6 @@ export default async function DonationsPage() {
             <h4 className="text-sm font-medium text-gray-900 mb-2">⚠️ 重要事項</h4>
             <p className="text-xs text-gray-600">
               ※ 募金は定期的に実施されます。チャレンジ完了から実際の募金実施まで時間差が生じる場合があります。
-              ※ 募金証明書や領収書は各団体から提供されたものです。
               ※ 税務上の寄付金控除については、各団体のポリシーに従います。
             </p>
           </div>

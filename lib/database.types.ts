@@ -51,6 +51,12 @@ export interface Database {
           achievement_rate: number
           donation_amount: number
           payment_intent_id: string | null
+          payment_completed: boolean
+          payment_completed_at: string | null
+          refund_completed: boolean
+          refund_amount: number | null
+          refund_completed_at: string | null
+          stripe_refund_id: string | null
           created_at: string
           updated_at: string
         }
@@ -65,6 +71,12 @@ export interface Database {
           achievement_rate?: number
           donation_amount?: number
           payment_intent_id?: string | null
+          payment_completed?: boolean
+          payment_completed_at?: string | null
+          refund_completed?: boolean
+          refund_amount?: number | null
+          refund_completed_at?: string | null
+          stripe_refund_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -79,6 +91,12 @@ export interface Database {
           achievement_rate?: number
           donation_amount?: number
           payment_intent_id?: string | null
+          payment_completed?: boolean
+          payment_completed_at?: string | null
+          refund_completed?: boolean
+          refund_amount?: number | null
+          refund_completed_at?: string | null
+          stripe_refund_id?: string | null
           created_at?: string
           updated_at?: string
         }

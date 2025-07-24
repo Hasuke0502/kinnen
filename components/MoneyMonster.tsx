@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSoundManager } from './SoundManager'
 
 interface MoneyMonsterProps {
   totalAmount: number
@@ -12,6 +11,9 @@ interface MoneyMonsterProps {
   showDamageAnimation?: boolean
   lastDamage?: number
   isSuccess?: boolean
+  isGameCompleted?: boolean
+  onRestartChallenge?: () => Promise<void>
+  onFinishChallenge?: () => Promise<void>
 }
 
 export default function MoneyMonster({
@@ -22,11 +24,13 @@ export default function MoneyMonster({
   totalFailedDays,
   showDamageAnimation = false,
   lastDamage = 0,
-  isSuccess = false
+  isSuccess = false,
+  isGameCompleted = false,
+  onRestartChallenge,
+  onFinishChallenge
 }: MoneyMonsterProps) {
   const [animatingDamage, setAnimatingDamage] = useState(false)
   const [currentMonsterState, setCurrentMonsterState] = useState('healthy')
-  const { playDamageSound, playSuccessSound } = useSoundManager()
   
   // モンスターの状態を決定
   useEffect(() => {
@@ -47,16 +51,10 @@ export default function MoneyMonster({
   useEffect(() => {
     if (showDamageAnimation) {
       setAnimatingDamage(true)
-      // 音響効果を再生
-      if (isSuccess) {
-        playSuccessSound()
-      } else {
-        playDamageSound()
-      }
       const timer = setTimeout(() => setAnimatingDamage(false), 2000)
       return () => clearTimeout(timer)
     }
-  }, [showDamageAnimation, isSuccess, playSuccessSound, playDamageSound])
+  }, [showDamageAnimation])
 
   const getMonsterEmoji = () => {
     switch (currentMonsterState) {
@@ -91,6 +89,20 @@ export default function MoneyMonster({
       return '順調にダメージを与えています！'
     } else {
       return 'マネーモンスターとの戦いが始まりました...'
+    }
+  }
+
+  const getGameCompletionMessage = () => {
+    if (achievementRate >= 100) {
+      return '完全勝利！マネーモンスターを完全に倒しました！'
+    } else if (achievementRate >= 75) {
+      return '大勝利！マネーモンスターに大ダメージを与えました！'
+    } else if (achievementRate >= 50) {
+      return '勝利！マネーモンスターとの戦いに勝ちました！'
+    } else if (achievementRate >= 25) {
+      return '健闘！記録を続けた努力は素晴らしいです！'
+    } else {
+      return 'チャレンジ参加ありがとうございました。次回はきっと良い結果になります！'
     }
   }
 
@@ -149,7 +161,10 @@ export default function MoneyMonster({
           </h2>
           
           <p className="text-purple-200 mb-4">
-            {achievementRate >= 100 ? 'すべてのお金を取り戻しました！' : `体力: ¥${remainingAmount.toLocaleString()}`}
+            {achievementRate >= 100 
+              ? 'すべてのお金を取り戻しました！' 
+              : `体力: ¥${remainingAmount.toLocaleString()} / ¥${totalAmount.toLocaleString()}`
+            }
           </p>
           
           {/* 体力ゲージ */}
@@ -170,7 +185,8 @@ export default function MoneyMonster({
             {getMonsterMessage()}
           </p>
           
-          <p className="text-sm text-purple-200">
+          {/* あなたが取り戻した金額の表示（コメントアウトを解除） */}
+          <p className="text-sm text-purple-200 mb-4">
             あなたが取り戻した金額: ¥{(totalAmount - remainingAmount).toLocaleString()}
           </p>
 
@@ -202,6 +218,58 @@ export default function MoneyMonster({
               <p className="text-orange-200 text-sm">
                 🔥 あと少し！この調子でマネーモンスターを倒しましょう！
               </p>
+            </div>
+          )}
+
+          {/* ゲーム完了時の結果発表 */}
+          {isGameCompleted && (
+            <div className="mt-6 p-6 bg-gradient-to-br from-yellow-400/20 to-orange-400/20 rounded-lg border border-yellow-400/30">
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-yellow-200 mb-3">
+                  🎉 30日間のチャレンジが完了しました！
+                </h3>
+                <p className="text-yellow-100 text-sm mb-4">
+                  {getGameCompletionMessage()}
+                </p>
+                
+                <div className="grid grid-cols-1 gap-3 mb-6 text-sm">
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-yellow-200">
+                      <span className="font-bold">記録成功日数:</span> 30日中{totalSuccessDays}日記録を続けました
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-yellow-200">
+                      <span className="font-bold">達成率:</span> {achievementRate.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-yellow-200">
+                      <span className="font-bold">取り戻した金額:</span> ¥{(totalAmount - remainingAmount).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <form action={onRestartChallenge}>
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+                    >
+                      🔄 もう一度チャレンジする
+                    </button>
+                  </form>
+                  
+                  <form action={onFinishChallenge}>
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200"
+                    >
+                      ✨ 今回は終了する
+                    </button>
+                  </form>
+                </div>
+              </div>
             </div>
           )}
         </div>

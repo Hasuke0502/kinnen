@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { SoundButton, useSoundManager } from '@/components/SoundManager'
 
 interface DonationTarget {
   id: string
@@ -16,7 +15,6 @@ interface DonationTarget {
 export default function OnboardingPage() {
   const router = useRouter()
   const supabase = createClient()
-  const { playClickSound } = useSoundManager()
   
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -126,6 +124,20 @@ export default function OnboardingPage() {
     const calculatedFee = calculateMonthlyAmount()
     setFormData(prev => ({ ...prev, participationFee: calculatedFee }))
   }, [formData.smokingFrequency, formData.smokingAmount])
+
+  // 参加費のプルダウン選択肢を動的に生成
+  const generateParticipationFeeOptions = () => {
+    const recommendedFee = calculateMonthlyAmount()
+    const baseOptions = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 18000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]
+    
+    // 推奨金額が既存の選択肢にない場合は追加
+    if (!baseOptions.includes(recommendedFee)) {
+      baseOptions.push(recommendedFee)
+      baseOptions.sort((a, b) => a - b) // 昇順でソート
+    }
+    
+    return baseOptions
+  }
 
   const handleSubmit = async () => {
     console.log('🚀 チャレンジ開始ボタンが押されました')
@@ -248,12 +260,10 @@ export default function OnboardingPage() {
   }
 
   const handleSelectChange = (callback: () => void) => {
-    playClickSound()
     callback()
   }
 
   const handleRadioClick = (callback: () => void) => {
-    playClickSound()
     callback()
   }
 
@@ -338,12 +348,12 @@ export default function OnboardingPage() {
                 </ul>
               </div>
 
-              <SoundButton
+              <button
                 onClick={nextStep}
                 className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md text-lg font-medium hover:bg-indigo-700 transition-colors"
               >
                 マネーモンスターとの戦いを始める 🚀
-              </SoundButton>
+              </button>
             </div>
           )}
 
@@ -414,18 +424,18 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <SoundButton
+                <button
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </SoundButton>
-                <SoundButton
+                </button>
+                <button
                   onClick={nextStep}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
                 >
                   次へ
-                </SoundButton>
+                </button>
               </div>
             </div>
           )}
@@ -453,32 +463,12 @@ export default function OnboardingPage() {
                   })))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="0">¥0</option>
-                  <option value="500">¥500</option>
-                  <option value="1000">¥1,000</option>
-                  <option value="1500">¥1,500</option>
-                  <option value="2000">¥2,000</option>
-                  <option value="2500">¥2,500</option>
-                  <option value="3000">¥3,000</option>
-                  <option value="3500">¥3,500</option>
-                  <option value="4000">¥4,000</option>
-                  <option value="4500">¥4,500</option>
-                  <option value="5000">¥5,000</option>
-                  <option value="6000">¥6,000</option>
-                  <option value="7000">¥7,000</option>
-                  <option value="8000">¥8,000</option>
-                  <option value="9000">¥9,000</option>
-                  <option value="10000">¥10,000</option>
-                  <option value="12000">¥12,000</option>
-                  <option value="15000">¥15,000</option>
-                  <option value="18000">¥18,000</option>
-                  <option value="20000">¥20,000</option>
-                  <option value="25000">¥25,000</option>
-                  <option value="30000">¥30,000</option>
-                  <option value="35000">¥35,000</option>
-                  <option value="40000">¥40,000</option>
-                  <option value="45000">¥45,000</option>
-                  <option value="50000">¥50,000</option>
+                  {generateParticipationFeeOptions().map(amount => (
+                    <option key={amount} value={amount}>
+                      ¥{amount.toLocaleString()}
+                      {amount === calculateMonthlyAmount() && ' (推奨)'}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -491,18 +481,18 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <SoundButton
+                <button
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </SoundButton>
-                <SoundButton
+                </button>
+                <button
                   onClick={nextStep}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
                 >
                   次へ
-                </SoundButton>
+                </button>
               </div>
             </div>
           )}
@@ -658,18 +648,18 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <SoundButton
+                <button
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </SoundButton>
-                <SoundButton
+                </button>
+                <button
                   onClick={nextStep}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
                 >
                   次へ
-                </SoundButton>
+                </button>
               </div>
             </div>
           )}
@@ -687,13 +677,13 @@ export default function OnboardingPage() {
                   {totalTargetsCount}の寄付先から厳選した6つをご紹介
                 </p>
                 <div className="mt-3 flex justify-center">
-                  <SoundButton
+                  <button
                     onClick={handleRefreshRecommendations}
                     disabled={isLoadingTargets}
                     className="inline-flex items-center px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
                   >
                     🔄 別の寄付先を提案
-                  </SoundButton>
+                  </button>
                 </div>
               </div>
               
@@ -706,12 +696,12 @@ export default function OnboardingPage() {
                 ) : donationTargets.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     利用可能な募金先がありません。
-                    <SoundButton
+                    <button
                       onClick={handleRefreshRecommendations}
                       className="ml-2 text-indigo-600 hover:underline"
                     >
                       再読み込み
-                    </SoundButton>
+                    </button>
                   </div>
                 ) : (
                   donationTargets.map((target) => (
@@ -745,7 +735,7 @@ export default function OnboardingPage() {
                         </div>
                         <div className="flex items-center space-x-2 ml-4">
                           {target.website_url && (
-                            <SoundButton
+                            <button
                               onClick={(e) => {
                                 e.preventDefault()
                                 window.open(target.website_url, '_blank')
@@ -753,7 +743,7 @@ export default function OnboardingPage() {
                               className="text-xs text-blue-600 hover:text-blue-800 border border-blue-300 rounded px-2 py-1"
                             >
                               詳細
-                            </SoundButton>
+                            </button>
                           )}
                           {formData.donationTargetId === target.id && (
                             <span className="text-indigo-600 text-lg">✓</span>
@@ -770,19 +760,19 @@ export default function OnboardingPage() {
               </div>
               
               <div className="flex space-x-3">
-                <SoundButton
+                <button
                   onClick={prevStep}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
                 >
                   戻る
-                </SoundButton>
-                <SoundButton
+                </button>
+                <button
                   onClick={nextStep}
                   disabled={!formData.donationTargetId}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 >
                   次へ
-                </SoundButton>
+                </button>
               </div>
             </div>
           )}

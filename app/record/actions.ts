@@ -103,7 +103,15 @@ export async function submitRecord(formData: FormData) {
 
     // チャレンジの統計を更新（記録すれば成功日数としてカウント）
     const newSuccessDays = challenge.total_success_days + 1 // 記録すれば禁煙の有無に関わらず成功日数増加
-    const newFailedDays = challenge.total_failed_days // 失敗日数は変更なし（記録をつけなかった日のみ失敗）
+    
+    // 経過日数を計算（開始日から今日まで）
+    const startDate = new Date(challenge.start_date)
+    const todayDate = new Date()
+    const elapsedDays = Math.floor((todayDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    
+    // 未記録日数 = 経過日数 - 記録成功日数
+    const newFailedDays = Math.max(0, elapsedDays - newSuccessDays)
+    
     const newAchievementRate = (newSuccessDays / 30) * 100
     const newDonationAmount = Math.floor(profile.participation_fee * (newSuccessDays / 30))
 
@@ -112,6 +120,7 @@ export async function submitRecord(formData: FormData) {
       newSuccessDays,
       oldFailedDays: challenge.total_failed_days,
       newFailedDays,
+      elapsedDays,
       newAchievementRate,
       newDonationAmount
     })

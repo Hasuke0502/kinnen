@@ -112,15 +112,13 @@ export default async function PaymentPage({
                 <ul className="space-y-1 list-disc list-inside">
                   <li>30日間のチャレンジ期間中は、毎日の記録を行ってください</li>
                   <li>記録内容は正直に入力してください</li>
-                  <li>チャレンジの途中放棄も可能ですが、参加費の返金はありません</li>
+                  
                 </ul>
               </div>
 
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">返金ポリシー</h4>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>参加費のお支払い後、チャレンジ開始前であれば全額返金可能です</li>
-                  <li>チャレンジ開始後の返金は、技術的な問題等の場合のみ対応します</li>
                   <li>禁煙成功日数に応じた募金は、チャレンジ完了後に実施されます</li>
                 </ul>
               </div>
@@ -130,7 +128,7 @@ export default async function PaymentPage({
                 <ul className="space-y-1 list-disc list-inside">
                   <li>募金額 = 参加費 × (記録成功日数 ÷ 30日)</li>
                   <li>募金先への寄付は月次でまとめて実施されます</li>
-                  <li>募金の証明書は募金証明ページで確認できます</li>
+                  
                 </ul>
               </div>
             </div>
