@@ -54,7 +54,7 @@ export async function createPaymentIntent(
     
     // Stripeのエラーの場合、より詳細な情報を提供
     if (error && typeof error === 'object' && 'type' in error) {
-      const stripeError = error as Stripe.StripeError
+      const stripeError = error as Stripe.StripeRawError
       console.error('🔧 Stripe Error Type:', stripeError.type)
       console.error('🔧 Stripe Error Code:', stripeError.code)
     }
@@ -137,13 +137,13 @@ export async function createRefund(
     return {
       id: refund.id,
       amount: refund.amount,
-      status: refund.status,
+      status: refund.status || 'unknown',
     }
   } catch (error) {
     console.error('🔧 Stripe createRefund error:', error)
     
     if (error && typeof error === 'object' && 'type' in error) {
-      const stripeError = error as Stripe.StripeError
+      const stripeError = error as Stripe.StripeRawError
       console.error('🔧 Stripe Error Type:', stripeError.type)
       console.error('🔧 Stripe Error Code:', stripeError.code)
     }
