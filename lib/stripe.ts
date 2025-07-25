@@ -9,7 +9,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 // console.log('🔧 Initializing Stripe with key:', process.env.STRIPE_SECRET_KEY.substring(0, 12) + '...')
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20', // 正しいStripe APIバージョン
+  apiVersion: '2025-06-30.basil', // 正しいStripe APIバージョン
 })
 
 export interface PaymentIntent {

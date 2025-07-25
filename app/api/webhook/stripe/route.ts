@@ -82,7 +82,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, supabas
   }
 }
 
-async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent, supabase: SupabaseClient) {
+async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent, _supabase: SupabaseClient) {
   try {
     const challengeId = paymentIntent.metadata.challenge_id
     const userId = paymentIntent.metadata.user_id

@@ -95,11 +95,11 @@ export async function POST(_request: NextRequest) {
         const refundResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/refund`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${user.access_token}` // 認証情報を渡す
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            challengeId: challenge.id
+            challengeId: challenge.id,
+            userId: user.id // ユーザーIDを明示的に渡す
           })
         })
 

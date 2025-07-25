@@ -88,17 +88,7 @@ export function scheduleRecordReminder(recordTime: string): void {
     sendLocalNotification('📝 記録の時間です', {
       body: '今日の禁煙チャレンジの記録をつけましょう！',
       tag: 'record-reminder',
-      requireInteraction: true,
-      actions: [
-        {
-          action: 'record',
-          title: '記録する'
-        },
-        {
-          action: 'dismiss',
-          title: '後で'
-        }
-      ]
+      requireInteraction: true
     })
 
     // 翌日のリマインダーも設定

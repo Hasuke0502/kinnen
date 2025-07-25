@@ -7,8 +7,7 @@ import {
   Elements,
   CardElement,
   useStripe,
-  useElements,
-  StripeCardElementChangeEvent
+  useElements
 } from '@stripe/react-stripe-js'
 
 // Stripe初期化
@@ -67,7 +66,7 @@ function CheckoutForm({ amount, challengeId, onSuccess, onError }: PaymentFormPr
   }, [amount, createPaymentIntent])
 
   // カード情報の変更を監視
-  const handleCardChange = (event: StripeCardElementChangeEvent) => {
+  const handleCardChange = (event: { complete: boolean; error?: { message: string }; empty: boolean }) => {
     console.log('🔍 Card Change Event:', {
       complete: event.complete,
       error: event.error?.message,

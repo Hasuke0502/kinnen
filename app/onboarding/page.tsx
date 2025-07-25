@@ -738,7 +738,9 @@ export default function OnboardingPage() {
                             <button
                               onClick={(e) => {
                                 e.preventDefault()
-                                window.open(target.website_url, '_blank')
+                                if (target.website_url) {
+                                  window.open(target.website_url, '_blank')
+                                }
                               }}
                               className="text-xs text-blue-600 hover:text-blue-800 border border-blue-300 rounded px-2 py-1"
                             >

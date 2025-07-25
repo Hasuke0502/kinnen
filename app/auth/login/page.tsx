@@ -58,7 +58,7 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
-    } catch (error) {
+    } catch {
       setError('予期しないエラーが発生しました')
     } finally {
       setLoading(false)
@@ -84,7 +84,7 @@ export default function LoginPage() {
       } else {
         setMessage('確認メールを送信しました。メールをご確認ください。')
       }
-    } catch (error) {
+    } catch {
       setError('予期しないエラーが発生しました')
     } finally {
       setLoading(false)

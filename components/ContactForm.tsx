@@ -28,7 +28,7 @@ export default function ContactForm({ userEmail }: ContactFormProps) {
       } else {
         setMessage(result.error || 'エラーが発生しました。もう一度お試しください。')
       }
-    } catch (error) {
+    } catch {
       setMessage('エラーが発生しました。もう一度お試しください。')
     } finally {
       setIsSubmitting(false)

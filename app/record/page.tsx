@@ -6,8 +6,11 @@ import RecordForm from '@/components/RecordForm'
 export default async function RecordPage({
   searchParams
 }: {
-  searchParams: { error?: string; message?: string }
+  searchParams: Promise<{ error?: string; message?: string }>
 }) {
+  // searchParamsを非同期で取得
+  const resolvedSearchParams = await searchParams
+  
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -69,16 +72,16 @@ export default async function RecordPage({
         </div>
 
         {/* エラーメッセージ */}
-        {searchParams.error && (
+        {resolvedSearchParams.error && (
           <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {searchParams.error}
+            {resolvedSearchParams.error}
           </div>
         )}
 
         {/* 成功メッセージ */}
-        {searchParams.message && (
+        {resolvedSearchParams.message && (
           <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-            {searchParams.message}
+            {resolvedSearchParams.message}
           </div>
         )}
 

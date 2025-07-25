@@ -43,10 +43,13 @@ async function finishChallenge() {
 export default async function DashboardPage({
   searchParams
 }: {
-  searchParams: { message?: string }
+  searchParams: Promise<{ message?: string }>
 }) {
   // cookies()を呼び出してキャッシュから除外
   await cookies()
+  
+  // searchParamsを非同期で取得
+  const resolvedSearchParams = await searchParams
   
   const supabase = await createClient()
   
@@ -186,9 +189,9 @@ export default async function DashboardPage({
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* 成功メッセージ */}
-          {searchParams.message && (
+          {resolvedSearchParams.message && (
             <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-              {decodeURIComponent(searchParams.message)}
+              {decodeURIComponent(resolvedSearchParams.message)}
             </div>
           )}
 
