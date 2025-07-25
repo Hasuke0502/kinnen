@@ -76,12 +76,7 @@ export default async function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">記録時間</p>
-                    <p className="text-xs text-gray-600">{profile.record_time}</p>
-                  </div>
-                </div>
+                
 
                 {donationTarget && (
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">

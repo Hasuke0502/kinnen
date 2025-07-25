@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 背景円 -->
+  <circle cx="16" cy="16" r="15" fill="#f8f9fa" stroke="#e9ecef" stroke-width="1"/>
+  
+  <!-- タバコ本体 -->
+  <rect x="8" y="14" width="12" height="3" rx="1" fill="#d4a574"/>
+  
+  <!-- タバコのフィルター部分 -->
+  <rect x="8" y="14" width="3" height="3" rx="1" fill="#f5e6d3"/>
+  
+  <!-- タバコの先端（火がついている部分） -->
+  <rect x="19.5" y="14.5" width="1" height="2" fill="#ff6b6b"/>
+  
+  <!-- 煙 -->
+  <circle cx="21.5" cy="13" r="0.8" fill="#adb5bd" opacity="0.7"/>
+  <circle cx="22.5" cy="11.5" r="0.6" fill="#adb5bd" opacity="0.5"/>
+  <circle cx="23" cy="10" r="0.4" fill="#adb5bd" opacity="0.3"/>
+  
+  <!-- 禁止マーク（赤い×印） -->
+  <line x1="6" y1="6" x2="26" y2="26" stroke="#dc3545" stroke-width="3" stroke-linecap="round"/>
+  <line x1="26" y1="6" x2="6" y2="26" stroke="#dc3545" stroke-width="3" stroke-linecap="round"/>
+</svg> 
