@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 import { verifyWebhookSignature } from '@/lib/stripe'
 import Stripe from 'stripe'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, supabase: any) {
+async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, supabase: SupabaseClient) {
   try {
     const challengeId = paymentIntent.metadata.challenge_id
     const userId = paymentIntent.metadata.user_id
@@ -81,7 +82,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, supabas
   }
 }
 
-async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent, supabase: any) {
+async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent, supabase: SupabaseClient) {
   try {
     const challengeId = paymentIntent.metadata.challenge_id
     const userId = paymentIntent.metadata.user_id

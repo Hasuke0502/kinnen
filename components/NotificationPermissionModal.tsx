@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   getNotificationPermission, 
   requestNotificationPermission,
@@ -82,10 +82,15 @@ export default function NotificationPermissionModal() {
     closeModal()
   }
 
-  const handleLater = () => {
-    // 「後で」を選択した場合は記録しない（次回起動時に再表示）
-    closeModal()
-  }
+  const handleLater = useCallback(() => {
+    setIsVisible(false)
+    setIsAnimating(false)
+    
+    // 24時間後に再表示するためのタイムスタンプを保存
+    const tomorrow = new Date()
+    tomorrow.setHours(tomorrow.getHours() + 24)
+    localStorage.setItem('notification_reminder_time', tomorrow.getTime().toString())
+  }, [])
 
   const closeModal = () => {
     setIsAnimating(false)
@@ -106,7 +111,7 @@ export default function NotificationPermissionModal() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isVisible])
+  }, [isVisible, handleLater])
 
   // フォーカス管理
   useEffect(() => {

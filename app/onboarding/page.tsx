@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -33,12 +33,7 @@ export default function OnboardingPage() {
     recordTime: '20:00'
   })
 
-  useEffect(() => {
-    fetchDonationTargets()
-    checkUserProfile()
-  }, [])
-
-  const checkUserProfile = async () => {
+  const checkUserProfile = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -60,9 +55,9 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error('プロファイル確認エラー:', error)
     }
-  }
+  }, [supabase, router])
 
-  const fetchDonationTargets = async () => {
+  const fetchDonationTargets = useCallback(async () => {
     setIsLoadingTargets(true)
     try {
       const { data, error, count } = await supabase
@@ -93,14 +88,19 @@ export default function OnboardingPage() {
     } finally {
       setIsLoadingTargets(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchDonationTargets()
+    checkUserProfile()
+  }, [fetchDonationTargets, checkUserProfile])
 
   const refreshRecommendations = () => {
     fetchDonationTargets()
   }
 
-  const calculateMonthlyAmount = () => {
-    const pricePerPack = 500
+  const calculateMonthlyAmount = useCallback(() => {
+    const pricePerPack = 500 // 1箱500円と仮定
     let monthlyPacks = 0
 
     switch (formData.smokingFrequency) {
@@ -118,12 +118,12 @@ export default function OnboardingPage() {
     const monthlyAmount = monthlyPacks * pricePerPack
     // 100の位で四捨五入
     return Math.round(monthlyAmount / 100) * 100
-  }
+  }, [formData.smokingFrequency, formData.smokingAmount])
 
   useEffect(() => {
     const calculatedFee = calculateMonthlyAmount()
     setFormData(prev => ({ ...prev, participationFee: calculatedFee }))
-  }, [formData.smokingFrequency, formData.smokingAmount])
+  }, [calculateMonthlyAmount])
 
   // 参加費のプルダウン選択肢を動的に生成
   const generateParticipationFeeOptions = () => {

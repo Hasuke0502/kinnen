@@ -54,8 +54,9 @@ export async function createPaymentIntent(
     
     // Stripeのエラーの場合、より詳細な情報を提供
     if (error && typeof error === 'object' && 'type' in error) {
-      console.error('🔧 Stripe Error Type:', (error as any).type)
-      console.error('🔧 Stripe Error Code:', (error as any).code)
+      const stripeError = error as Stripe.StripeError
+      console.error('🔧 Stripe Error Type:', stripeError.type)
+      console.error('🔧 Stripe Error Code:', stripeError.code)
     }
     
     throw new Error(`Payment intent creation failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -142,8 +143,9 @@ export async function createRefund(
     console.error('🔧 Stripe createRefund error:', error)
     
     if (error && typeof error === 'object' && 'type' in error) {
-      console.error('🔧 Stripe Error Type:', (error as any).type)
-      console.error('🔧 Stripe Error Code:', (error as any).code)
+      const stripeError = error as Stripe.StripeError
+      console.error('🔧 Stripe Error Type:', stripeError.type)
+      console.error('🔧 Stripe Error Code:', stripeError.code)
     }
     
     throw new Error(`Refund creation failed: ${error instanceof Error ? error.message : String(error)}`)

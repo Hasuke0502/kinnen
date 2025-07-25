@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   Elements,
   CardElement,
   useStripe,
-  useElements
+  useElements,
+  StripeCardElementChangeEvent
 } from '@stripe/react-stripe-js'
 
 // Stripe初期化
@@ -32,13 +33,7 @@ function CheckoutForm({ amount, challengeId, onSuccess, onError }: PaymentFormPr
   const [cardError, setCardError] = useState('')
 
   // Payment Intent作成
-  useEffect(() => {
-    if (amount > 0) {
-      createPaymentIntent()
-    }
-  }, [amount, challengeId])
-
-  const createPaymentIntent = async () => {
+  const createPaymentIntent = useCallback(async () => {
     try {
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
@@ -63,10 +58,16 @@ function CheckoutForm({ amount, challengeId, onSuccess, onError }: PaymentFormPr
       setError(errorMessage)
       onError?.(errorMessage)
     }
-  }
+  }, [amount, challengeId, onError])
+
+  useEffect(() => {
+    if (amount > 0) {
+      createPaymentIntent()
+    }
+  }, [amount, createPaymentIntent])
 
   // カード情報の変更を監視
-  const handleCardChange = (event: any) => {
+  const handleCardChange = (event: StripeCardElementChangeEvent) => {
     console.log('🔍 Card Change Event:', {
       complete: event.complete,
       error: event.error?.message,
