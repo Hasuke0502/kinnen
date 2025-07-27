@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+
+export const metadata: Metadata = {
+  title: "禁煙30日チャレンジ | マネーモンスターと戦い禁煙を習慣化",
+  description: "金銭的インセンティブとゲーム性で30日間の禁煙をサポートするアプリ。毎日記録をつけてマネーモンスターを倒し、お金と健康を取り戻そう。",
+};
 
 export default async function Home() {
   const supabase = await createClient()

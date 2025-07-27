@@ -4,6 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 
+// 日本時間での日付を取得する関数
+function getJSTDate(): string {
+  const now = new Date()
+  // 日本時間（UTC+9）に変換
+  const jstOffset = 9 * 60 * 60 * 1000 // 9時間をミリ秒に変換
+  const jstTime = new Date(now.getTime() + jstOffset)
+  return jstTime.toISOString().split('T')[0]
+}
+
 export async function submitRecord(formData: FormData) {
   const supabase = await createClient()
   
@@ -19,8 +28,9 @@ export async function submitRecord(formData: FormData) {
     // フォームデータを取得
     const smoked = formData.get('smoked') === 'true'
     const countermeasure = formData.get('countermeasure') as string || null
+    const today = getJSTDate() // 日本時間での今日の日付
     
-    console.log('記録データ:', { smoked, countermeasure })
+    console.log('記録データ:', { smoked, countermeasure, recordDate: today })
 
     // プロファイルとチャレンジを取得
     const [profileResult, challengeResult] = await Promise.all([
@@ -54,14 +64,13 @@ export async function submitRecord(formData: FormData) {
 
     const profile = profileResult.data
     const challenge = challengeResult.data
-    const today = new Date().toISOString().split('T')[0]
 
     console.log('取得データ:', {
       participationFee: profile.participation_fee,
       challengeId: challenge.id,
       currentSuccessDays: challenge.total_success_days,
       currentFailedDays: challenge.total_failed_days,
-      today
+      recordDate: today
     })
 
     // 今日の記録があるかチェック
@@ -101,26 +110,38 @@ export async function submitRecord(formData: FormData) {
 
     console.log('記録保存完了')
 
-    // チャレンジの統計を更新（記録すれば成功日数としてカウント）
-    const newSuccessDays = challenge.total_success_days + 1 // 記録すれば禁煙の有無に関わらず成功日数増加
+    // 全ての記録を取得して正確な統計を計算
+    const { data: allRecords } = await supabase
+      .from('daily_records')
+      .select('record_date')
+      .eq('challenge_id', challenge.id)
+
+    const recordCount = allRecords?.length || 0
     
-    // 経過日数を計算（開始日から今日まで）
+    // 経過日数を計算（開始日から現在まで、日本時間基準）
     const startDate = new Date(challenge.start_date)
-    const todayDate = new Date()
-    const elapsedDays = Math.floor((todayDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const currentDate = new Date(getJSTDate() + 'T00:00:00') // 日本時間での今日を日付オブジェクトに変換
+    const elapsedDays = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
     
-    // 未記録日数 = 経過日数 - 記録成功日数
-    const newFailedDays = Math.max(0, elapsedDays - newSuccessDays)
+    // 未記録日数 = 経過日数 - 記録成功日数（ただし30日を超えない）
+    const cappedElapsedDays = Math.min(elapsedDays, 30)
+    const newSuccessDays = recordCount
+    const newFailedDays = Math.max(0, cappedElapsedDays - newSuccessDays)
     
     const newAchievementRate = (newSuccessDays / 30) * 100
     const newDonationAmount = Math.floor(profile.participation_fee * (newSuccessDays / 30))
 
+    // チャレンジの終了日を計算
+    const challengeEndDate = new Date(startDate)
+    challengeEndDate.setDate(startDate.getDate() + 29) // 30日チャレンジなので、開始日から29日後が最終日
+    const isFinalDayRecord = today === challengeEndDate.toISOString().split('T')[0]
+
     console.log('チャレンジ統計更新:', {
-      oldSuccessDays: challenge.total_success_days,
-      newSuccessDays,
-      oldFailedDays: challenge.total_failed_days,
-      newFailedDays,
+      recordCount,
       elapsedDays,
+      cappedElapsedDays,
+      newSuccessDays,
+      newFailedDays,
       newAchievementRate,
       newDonationAmount
     })
@@ -131,7 +152,8 @@ export async function submitRecord(formData: FormData) {
         total_success_days: newSuccessDays,
         total_failed_days: newFailedDays,
         achievement_rate: newAchievementRate,
-        donation_amount: newDonationAmount
+        donation_amount: newDonationAmount,
+        status: isFinalDayRecord || newSuccessDays === 30 ? 'completed' : challenge.status // 最終日記録または30日成功で完了
       })
       .eq('id', challenge.id)
 
@@ -153,11 +175,16 @@ export async function submitRecord(formData: FormData) {
 
     // 成功メッセージと共にダッシュボードにリダイレクト
     const successMessage = smoked 
-      ? '記録完了！記録を続けることが重要です。明日も頑張りましょう！'
+      ? '記録完了！記録を続けることが重要です！明日も頑張りましょう！'
       : '記録完了！マネーモンスターに大ダメージを与えました！'
     
     console.log('リダイレクト中:', successMessage)
-    redirect(`/dashboard?message=${encodeURIComponent(successMessage)}`)
+    // ゲーム完了フラグを付与してリダイレクト
+    const redirectTo = isFinalDayRecord || newSuccessDays === 30 
+      ? `/dashboard?message=${encodeURIComponent(successMessage)}&gameCompleted=true`
+      : `/dashboard?message=${encodeURIComponent(successMessage)}`
+    
+    redirect(redirectTo)
 
   } catch (error) {
     console.error('記録エラー:', error)

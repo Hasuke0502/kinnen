@@ -3,6 +3,15 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import RecordForm from '@/components/RecordForm'
 
+// 日本時間での日付を取得する関数
+function getJSTDate(): string {
+  const now = new Date()
+  // 日本時間（UTC+9）に変換
+  const jstOffset = 9 * 60 * 60 * 1000 // 9時間をミリ秒に変換
+  const jstTime = new Date(now.getTime() + jstOffset)
+  return jstTime.toISOString().split('T')[0]
+}
+
 export default async function RecordPage({
   searchParams
 }: {
@@ -44,8 +53,8 @@ export default async function RecordPage({
   const profile = profileResult.data
   const challenge = challengeResult.data
 
-  // 今日の記録があるかチェック
-  const today = new Date().toISOString().split('T')[0]
+  // 今日の記録があるかチェック（日本時間基準）
+  const today = getJSTDate()
   const { data: existingRecord } = await supabase
     .from('daily_records')
     .select('*')

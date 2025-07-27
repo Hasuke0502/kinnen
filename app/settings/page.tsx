@@ -145,6 +145,12 @@ export default async function SettingsPage() {
                   </ul>
                 </div>
 
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <Link href="/legal/commercial-transactions" className="text-sm font-medium text-gray-900 block py-1">
+                    特定商取引法に基づく表記
+                  </Link>
+                </div>
+
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
                     💡 データの取り扱いについてご質問がある場合は、お問い合わせフォームよりご連絡ください。

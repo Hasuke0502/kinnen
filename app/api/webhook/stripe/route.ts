@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         break
       
       case 'payment_intent.payment_failed':
-        await handlePaymentFailure(event.data.object as Stripe.PaymentIntent, supabase)
+        await handlePaymentFailure(event.data.object as Stripe.PaymentIntent)
         break
       
       default:
@@ -82,7 +82,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, supabas
   }
 }
 
-async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent, _supabase: SupabaseClient) {
+async function handlePaymentFailure(paymentIntent: Stripe.PaymentIntent) {
   try {
     const challengeId = paymentIntent.metadata.challenge_id
     const userId = paymentIntent.metadata.user_id

@@ -68,4 +68,20 @@ export async function logout() {
     console.error('Logout error:', error)
     redirect('/auth/login?error=' + encodeURIComponent('ログアウトに失敗しました'))
   }
+}
+
+export async function restartChallenge() {
+  'use server'
+  console.log('もう一度チャレンジする');
+  revalidatePath('/onboarding'); // オンボーディングページを再検証
+  redirect('/onboarding'); // オンボーディングページにリダイレクト
+}
+
+export async function finishChallenge() {
+  'use server'
+  console.log('今回は終了する');
+  const supabase = await createClient();
+  await supabase.auth.signOut(); // ログアウトアクションを呼び出す
+  revalidatePath('/', 'layout');
+  redirect('/auth/login');
 } 

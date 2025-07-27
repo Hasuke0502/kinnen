@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
+
+export const metadata: Metadata = {
+  title: '募金証明・社会貢献 | 禁煙30日チャレンジ',
+  description: '禁煙30日チャレンジアプリを通じた募金実績と社会貢献の状況を確認できます。あなたの禁煙がどのように世界に貢献しているかをご覧ください。',
+};
 
 export default async function DonationsPage() {
   const supabase = await createClient()
