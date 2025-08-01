@@ -64,12 +64,7 @@ export default function Header({
       isActive: false, // 記録履歴は常にダッシュボード内のセクションなので個別のアクティブ状態は持たない
       isScrollLink: true
     },
-    {
-      href: '/donations',
-      label: '募金証明',
-      icon: '🤝',
-      isActive: pathname === '/donations'
-    },
+
     {
       href: '/settings',
       label: '設定',

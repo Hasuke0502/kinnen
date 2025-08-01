@@ -12,14 +12,11 @@ import type { Database } from '@/lib/database.types'
 type UserProfile = Database['public']['Tables']['user_profiles']['Row']
 type Challenge = Database['public']['Tables']['challenges']['Row']
 type DailyRecord = Database['public']['Tables']['daily_records']['Row']
-type DonationTarget = Database['public']['Tables']['donation_targets']['Row']
-
 interface DashboardClientProps {
   profile: UserProfile;
   challenge: Challenge;
   todayRecord: DailyRecord | null;
   records: DailyRecord[];
-  donationTarget: DonationTarget | null;
   message?: string;
   isGameCompletedFromParams: boolean;
 }
@@ -29,7 +26,6 @@ export default function DashboardClient({
   challenge,
   todayRecord,
   records,
-  donationTarget,
   message,
   isGameCompletedFromParams,
 }: DashboardClientProps) {
@@ -67,21 +63,16 @@ export default function DashboardClient({
   const achievementRate = totalDays > 0 ? (actualSuccessDays / totalDays) * 100 : 0
   const currentSuccessRate = cappedElapsedDays > 0 ? (actualSuccessDays / cappedElapsedDays) * 100 : 0
   
-  // 返金・募金額の計算
+  // 返金額の計算
   let payoutAmount = 0
-  if (profile.payout_method === 'refund') {
-    // 返金の場合：参加費が500円を超える場合のみ手数料を引いて計算
-    if (profile.participation_fee > 500) {
-      payoutAmount = Math.floor((profile.participation_fee - 500) * (actualSuccessDays / totalDays))
-    } else {
-      payoutAmount = 0
-    }
+  // 返金の場合：参加費が500円を超える場合のみ手数料を引いて計算
+  if (profile.participation_fee > 500) {
+    payoutAmount = Math.floor((profile.participation_fee - 500) * (actualSuccessDays / totalDays))
   } else {
-    // 募金の場合：参加費全額が対象
-    payoutAmount = Math.floor(profile.participation_fee * (actualSuccessDays / totalDays))
+    payoutAmount = 0
   }
   
-  const remainingAmount = profile.participation_fee - (profile.payout_method === 'donation' ? payoutAmount : (profile.participation_fee > 500 ? payoutAmount + 500 : payoutAmount))
+  const remainingAmount = profile.participation_fee - (profile.participation_fee > 500 ? payoutAmount + 500 : payoutAmount)
 
   // カレンダー生成
   const generateCalendar = () => {
@@ -167,7 +158,7 @@ export default function DashboardClient({
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {profile.payout_method === 'refund' ? '返金予定額' : '募金予定額'}
+                返金予定額
               </p>
               <p className="text-2xl font-semibold text-gray-900">¥{payoutAmount.toLocaleString()}</p>
             </div>
@@ -315,57 +306,34 @@ export default function DashboardClient({
             </div>
           </div>
 
-          {/* 返金・募金予定 */}
+          {/* 返金予定 */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">
-                {profile.payout_method === 'refund' ? '返金状況' : '募金状況'}
+                返金状況
               </h3>
               <Link
-                href={profile.payout_method === 'refund' ? "/settings" : "/donations"}
-                className={`text-sm hover:underline ${
-                  profile.payout_method === 'refund' ? 'text-blue-600 hover:text-blue-800' : 'text-green-600 hover:text-green-800'
-                }`}
+                href="/settings"
+                className="text-sm hover:underline text-blue-600 hover:text-blue-800"
               >
-                {profile.payout_method === 'refund' ? '設定 →' : '証明 →'}
+                設定 →
               </Link>
             </div>
             
             <div className="space-y-4">
               <div className="text-center">
-                <p className={`text-2xl font-bold ${
-                  profile.payout_method === 'refund' ? 'text-blue-600' : 'text-green-600'}
-                }`}>
+                <p className="text-2xl font-bold text-blue-600">
                   ¥{payoutAmount.toLocaleString()}
                 </p>
                 <p className="text-sm text-gray-600">
-                  現在の{profile.payout_method === 'refund' ? '返金' : '募金'}予定額
+                  現在の返金予定額
                 </p>
               </div>
               
-              {profile.payout_method === 'donation' && donationTarget && (
-                <div className="border-t pt-3">
-                  <h4 className="font-medium text-gray-900">{donationTarget.name}</h4>
-                  <p className="text-sm text-gray-600">{donationTarget.description}</p>
-                  {donationTarget.website_url && (
-                    <a 
-                      href={donationTarget.website_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm text-indigo-600 hover:text-indigo-800"
-                    >
-                      公式サイト →
-                    </a>
-                  )}
-                </div>
-              )}
-              
               <div className="text-xs text-gray-500">
-                {profile.payout_method === 'refund' 
-                  ? profile.participation_fee > 500
-                    ? '(参加費 - 500円) × (記録成功日数 ÷ 30日) = 返金額'
-                    : '参加費が500円以下のため返金なし'
-                  : '参加費 × (記録成功日数 ÷ 30日) = 募金額'
+                {profile.participation_fee > 500
+                  ? '(参加費 - 500円) × (記録成功日数 ÷ 30日) = 返金額'
+                  : '参加費が500円以下のため返金なし'
                 }
               </div>
             </div>
@@ -479,10 +447,7 @@ export default function DashboardClient({
           <p className="text-lg mb-2">30日中 <span className="font-bold">{actualSuccessDays}日</span> 記録を続けました</p>
           <p className="text-lg mb-2">達成率 <span className="font-bold">{achievementRate.toFixed(1)}%</span></p>
           <p className="text-lg mb-4">
-            {profile.payout_method === 'refund' 
-              ? `¥${payoutAmount.toLocaleString()}を取り戻しました`
-              : `¥${payoutAmount.toLocaleString()}を募金しました`
-            }
+            ¥{payoutAmount.toLocaleString()}を取り戻しました
           </p>
           
           <div className="mt-6 flex flex-col space-y-4">

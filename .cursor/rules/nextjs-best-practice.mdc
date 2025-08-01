@@ -1,7 +1,6 @@
 ---
 alwaysApply: true
 ---
-
 # Next.js App Router ベストプラクティス
 
 ## 1. Server ComponentとRoute Handlerの適切な使い分け

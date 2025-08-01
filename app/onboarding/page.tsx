@@ -4,12 +4,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
-interface DonationTarget {
-  id: string
-  name: string
-  description: string
-  logo_url: string | null
-  website_url: string | null
+// 音声効果のための関数
+const playClickSound = () => {
+  try {
+    const audio = new Audio('/sounds/click.mp3')
+    audio.volume = 0.3 // 音量を30%に設定
+    audio.play().catch(error => {
+      console.log('音声再生エラー:', error)
+    })
+  } catch (error) {
+    console.log('音声ファイル読み込みエラー:', error)
+  }
 }
 
 export default function OnboardingPage() {
@@ -18,18 +23,15 @@ export default function OnboardingPage() {
   
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [donationTargets, setDonationTargets] = useState<DonationTarget[]>([])
   const [error, setError] = useState('')
-  const [isLoadingTargets, setIsLoadingTargets] = useState(false)
-  const [totalTargetsCount, setTotalTargetsCount] = useState(0)
   
   // フォームデータ
   const [formData, setFormData] = useState({
     smokingFrequency: 'daily' as 'daily' | 'weekly' | 'monthly',
     smokingAmount: 1,
     participationFee: 15000,
-    payoutMethod: 'donation' as 'refund' | 'donation',
-    donationTargetId: '',
+    payoutMethod: 'refund' as 'refund',
+    refundPlan: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
     recordTime: '20:00'
   })
 
@@ -57,47 +59,9 @@ export default function OnboardingPage() {
     }
   }, [supabase, router])
 
-  const fetchDonationTargets = useCallback(async () => {
-    setIsLoadingTargets(true)
-    try {
-      const { data, error, count } = await supabase
-        .from('donation_targets')
-        .select('*', { count: 'exact' })
-        .eq('is_active', true)
-        .order('name')
-      
-      if (error) {
-        console.error('募金先取得エラー:', error)
-        setError('募金先の取得に失敗しました')
-        return
-      }
-
-      if (data && data.length > 0) {
-        setTotalTargetsCount(count || data.length)
-        // ランダムに並び替えて6つのおすすめを選択
-        const shuffledData = [...data].sort(() => Math.random() - 0.5)
-        const recommendedTargets = shuffledData.slice(0, 6)
-        setDonationTargets(recommendedTargets)
-        setFormData(prev => ({ ...prev, donationTargetId: recommendedTargets[0].id }))
-      } else {
-        setError('利用可能な募金先がありません')
-      }
-    } catch (error) {
-      console.error('募金先取得エラー:', error)
-      setError('募金先の取得に失敗しました')
-    } finally {
-      setIsLoadingTargets(false)
-    }
-  }, [supabase])
-
   useEffect(() => {
-    fetchDonationTargets()
     checkUserProfile()
-  }, [fetchDonationTargets, checkUserProfile])
-
-  const refreshRecommendations = () => {
-    fetchDonationTargets()
-  }
+  }, [checkUserProfile])
 
   const calculateMonthlyAmount = useCallback(() => {
     const pricePerPack = 500 // 1箱500円と仮定
@@ -141,6 +105,7 @@ export default function OnboardingPage() {
 
   const handleSubmit = async () => {
     console.log('🚀 チャレンジ開始ボタンが押されました')
+    playClickSound()
     setLoading(true)
     setError('')
     
@@ -157,11 +122,6 @@ export default function OnboardingPage() {
 
       // バリデーション
       console.log('2️⃣ バリデーション確認中...')
-      if (formData.payoutMethod === 'donation' && !formData.donationTargetId) {
-        console.log('❌ 募金先未選択')
-        setError('募金先を選択してください')
-        return
-      }
       console.log('✅ バリデーション成功')
 
       console.log('3️⃣ プロファイル作成データ準備中...')
@@ -171,7 +131,7 @@ export default function OnboardingPage() {
         smoking_amount: formData.smokingAmount,
         participation_fee: formData.participationFee,
         payout_method: formData.payoutMethod,
-        donation_target_id: formData.payoutMethod === 'donation' ? formData.donationTargetId : null,
+        refund_plan: formData.refundPlan,
         record_time: formData.recordTime
       }
       console.log('📋 プロファイル作成データ:', profileData)
@@ -241,35 +201,27 @@ export default function OnboardingPage() {
 
   const nextStep = () => {
     setError('')
-    // 返金選択時はステップ4（募金先選択）をスキップ
-    if (step === 3 && formData.payoutMethod === 'refund') {
-      setStep(5)
-    } else {
-      setStep(step + 1)
-    }
+    playClickSound()
+    setStep(step + 1)
   }
   
   const prevStep = () => {
     setError('')
-    // 返金選択時でステップ5から戻る場合はステップ3に戻る
-    if (step === 5 && formData.payoutMethod === 'refund') {
-      setStep(3)
-    } else {
-      setStep(step - 1)
-    }
+    playClickSound()
+    setStep(step - 1)
   }
 
   const handleSelectChange = (callback: () => void) => {
+    playClickSound()
     callback()
   }
 
   const handleRadioClick = (callback: () => void) => {
+    playClickSound()
     callback()
   }
 
-  const handleRefreshRecommendations = () => {
-    refreshRecommendations()
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -286,12 +238,12 @@ export default function OnboardingPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">設定進捗</span>
-              <span className="text-sm font-medium text-gray-600">{step + 1}/6</span>
+              <span className="text-sm font-medium text-gray-600">{step + 1}/5</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((step + 1) / 6) * 100}%` }}
+                style={{ width: `${((step + 1) / 5) * 100}%` }}
               />
             </div>
           </div>
@@ -324,15 +276,15 @@ export default function OnboardingPage() {
                     <span className="text-2xl">🎯</span>
                     <div>
                       <p className="font-medium text-gray-900">30日間の挑戦</p>
-                      <p className="text-gray-600">記録日数に応じて、お金を取り戻したり、募金したりできます</p>
+                      <p className="text-gray-600">記録日数に応じて、お金を取り戻すことができます</p>
                     </div>
                   </div>
                   
                   <div className="flex items-start space-x-3">
                     <span className="text-2xl">💰</span>
                     <div>
-                      <p className="font-medium text-gray-900">2つの選択肢</p>
-                      <p className="text-gray-600">返金を受け取るか、慈善団体への募金かを選べます</p>
+                      <p className="font-medium text-gray-900">返金システム</p>
+                      <p className="text-gray-600">記録成功日数に応じて参加費の一部が返金されます</p>
                     </div>
                   </div>
                 </div>
@@ -341,10 +293,10 @@ export default function OnboardingPage() {
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h4 className="font-medium text-yellow-900 mb-2">💡 重要なポイント</h4>
                 <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• <strong>返金選択時</strong>：手数料500円を差し引いた金額が対象となります</li>
-                  <li>• <strong>募金選択時</strong>：参加費の全額が対象となります（手数料なし）</li>
+                  <li>• <strong>返金システム</strong>：手数料500円を差し引いた金額が対象となります</li>
                   <li>• <strong>記録をつけなかった日はカウントされません</strong></li>
-                  <li>• 30日間毎日記録をつけた場合、満額が返金または募金されます</li>
+                  <li>• 30日間毎日記録をつけた場合、満額（参加費-500円）が返金されます</li>
+                  <li>• 参加費が500円以下の場合は返金されません</li>
                 </ul>
               </div>
 
@@ -497,154 +449,193 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* ステップ3: 返金・募金選択 */}
+          {/* ステップ3: 返金プラン選択 */}
           {step === 3 && (
             <div className="space-y-6">
               <div className="text-center">
-                <span className="text-4xl block mb-4">💰</span>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">取り戻したお金の使い道</h2>
-                <p className="text-gray-600">マネーモンスターから取り戻したお金をどうするか選択してください</p>
+                <span className="text-4xl block mb-4">🎯</span>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">返金プランを選択してください</h2>
+                <p className="text-gray-600">あなたの禁煙意欲に合わせてプランを選んでください</p>
               </div>
 
               <div className="space-y-4">
+                {/* 初級プラン */}
                 <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                    formData.payoutMethod === 'refund' 
-                      ? 'border-indigo-500 bg-indigo-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    formData.refundPlan === 'beginner' 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-gray-300 bg-white hover:border-gray-400'
                   }`}
-                  onClick={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'refund' })))}
+                  onClick={() => {
+                    playClickSound()
+                    setFormData(prev => ({ ...prev, refundPlan: 'beginner' }))
+                  }}
                 >
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="radio"
-                      name="payoutMethod"
-                      value="refund"
-                      checked={formData.payoutMethod === 'refund'}
-                      onChange={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'refund' })))}
-                      className="mt-1"
-                    />
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">💳 返金を受け取る</h3>
-                      <p className="text-sm text-gray-600 mb-3">記録日数に応じて、参加費の一部が返金されます</p>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="text-lg font-medium text-gray-900">初級プラン</h3>
+                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">MVP</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        現在の返金システムをそのまま適用する最も基本的なプランです
+                      </p>
                       
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
-                        <p className="font-medium text-yellow-900 mb-1">⚠️ 手数料について</p>
-                        <p className="text-yellow-800">
-                          {formData.participationFee === 0 
-                            ? '参加費0円の場合、手数料はかかりません'
-                            : formData.participationFee <= 500
-                            ? '参加費が500円以下の場合、返金額は0円となります'
-                            : '返金処理手数料として500円がかかります'
+                      {/* 返金計算ロジック */}
+                      <div className="bg-blue-50 p-3 rounded text-sm mb-3">
+                        <p className="font-medium text-blue-900 mb-1">返金計算ロジック</p>
+                        <p className="text-blue-800 mb-2">
+                          {formData.participationFee > 500 
+                            ? `（参加費 - 500円）× 記録成功日数 ÷ 30日`
+                            : formData.participationFee === 0
+                            ? `0円（手数料なし）`
+                            : `0円（参加費が500円以下のため）`
                           }
                         </p>
-                        
-                        <div className="mt-2 text-xs text-yellow-700">
-                          {formData.participationFee === 0 ? (
-                            <>
-                              <p><strong>計算方法：</strong> 0円（手数料なし）</p>
-                              <p><strong>例：</strong> 参加費0円、20日記録成功した場合</p>
-                              <p>→ <strong>0円が返金</strong>（手数料なし）</p>
-                            </>
-                          ) : formData.participationFee <= 500 ? (
-                            <>
-                              <p><strong>計算方法：</strong> 0円（参加費が500円以下）</p>
-                              <p><strong>例：</strong> 参加費{formData.participationFee}円、20日記録成功した場合</p>
-                              <p>→ <strong>0円が返金</strong></p>
-                            </>
-                          ) : (
-                            <>
-                              <p><strong>計算方法：</strong> （参加費 - 500円）× 記録成功日数 ÷ 30日</p>
-                              <p><strong>例：</strong> 参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</p>
-                              <p>→ （{formData.participationFee.toLocaleString()}円 - 500円）× 20 ÷ 30 = <strong>{Math.round((formData.participationFee - 500) * 20 / 30).toLocaleString()}円が返金</strong></p>
-                            </>
-                          )}
-                        </div>
+                        <p className="text-blue-700 text-xs">
+                          禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます
+                        </p>
+                      </div>
+
+                      {/* 返金計算ロジックの具体例 */}
+                      <div className="bg-green-50 p-3 rounded text-sm mb-3">
+                        <p className="font-medium text-green-900 mb-1">📊 返金計算例</p>
+                        {formData.participationFee === 0 ? (
+                          <div className="text-green-800 text-xs">
+                            <p><strong>参加費0円、20日記録成功した場合</strong></p>
+                            <p>→ <strong>0円が返金</strong>（手数料なし）</p>
+                          </div>
+                        ) : formData.participationFee <= 500 ? (
+                          <div className="text-green-800 text-xs">
+                            <p><strong>参加費{formData.participationFee}円、20日記録成功した場合</strong></p>
+                            <p>→ <strong>0円が返金</strong>（参加費が500円以下のため）</p>
+                          </div>
+                        ) : (
+                          <div className="text-green-800 text-xs">
+                            <p><strong>参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</strong></p>
+                            <p>→ （{formData.participationFee.toLocaleString()}円 - 500円）× 20 ÷ 30 = <strong>{Math.round((formData.participationFee - 500) * 20 / 30).toLocaleString()}円が返金</strong></p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 重要なルール */}
+                      <div className="bg-yellow-50 p-3 rounded text-sm">
+                        <p className="font-medium text-yellow-900 mb-1">⚠️ 重要なルール</p>
+                        <ul className="text-yellow-800 text-xs space-y-1">
+                          <li>• 毎日記録をつけることで「記録成功日数」としてカウントされます</li>
+                          <li>• 禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます</li>
+                          <li>• 30日間毎日記録をつけた場合：
+                            {formData.participationFee > 500 
+                              ? ` 満額（参加費-500円）が返金されます`
+                              : ` 返金額は0円となります`}
+                          </li>
+                          <li>• チャレンジの途中放棄も可能ですが、参加費の返金はありません</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        formData.refundPlan === 'beginner' 
+                          ? 'border-green-500 bg-green-500' 
+                          : 'border-gray-300'
+                      }`}>
+                        {formData.refundPlan === 'beginner' && (
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                    formData.payoutMethod === 'donation' 
-                      ? 'border-indigo-500 bg-indigo-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'donation' })))}
-                >
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="radio"
-                      name="payoutMethod"
-                      value="donation"
-                      checked={formData.payoutMethod === 'donation'}
-                      onChange={() => handleRadioClick(() => setFormData(prev => ({ ...prev, payoutMethod: 'donation' })))}
-                      className="mt-1"
-                    />
+                {/* 中級プラン */}
+                <div className="p-4 border-2 border-gray-300 rounded-lg bg-gray-50 relative">
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                      🔒 準備中
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between opacity-60">
                     <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">🎁 募金する</h3>
-                      <p className="text-sm text-gray-600 mb-3">記録日数に応じた金額を、選択した団体に寄付します</p>
-                      
-                      <div className="bg-green-50 border border-green-200 rounded p-3 text-sm">
-                        <p className="font-medium text-green-900 mb-1">✨ 手数料なし</p>
-                        <p className="text-green-800">参加費の全額が寄付対象となります</p>
-                        
-                        <div className="mt-2 text-xs text-green-700">
-                          <p><strong>計算方法：</strong> 参加費 × 記録成功日数 ÷ 30日</p>
-                          <p><strong>例：</strong> 参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</p>
-                          <p>→ {formData.participationFee.toLocaleString()}円 × 20 ÷ 30 = <strong>{Math.round(formData.participationFee * 20 / 30).toLocaleString()}円を募金</strong></p>
-                        </div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="text-lg font-medium text-gray-900">中級プラン</h3>
+                        <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">準備中</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        ユーザーの禁煙成功日数に応じて返金額が変動するプラン
+                      </p>
+                      <div className="bg-yellow-50 p-3 rounded text-sm mb-3">
+                        <p className="font-medium text-yellow-900 mb-1">返金計算ロジック</p>
+                        <p className="text-yellow-800">(満額 - 500円) × 禁煙成功日 / 30日</p>
+                        <p className="text-yellow-700 text-xs mt-1">
+                          禁煙努力が直接返金額に反映されます
+                        </p>
+                      </div>
+                      <div className="bg-orange-50 p-3 rounded text-sm">
+                        <p className="font-medium text-orange-900 mb-1">📝 「禁煙成功日」の定義</p>
+                        <p className="text-orange-800 text-xs">
+                          中級プランにおける「禁煙成功日」は、喫煙を記録しなかった日数を指します
+                        </p>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <div className="w-6 h-6 rounded-full border-2 border-gray-300 bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-400 text-xs">🔒</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 上級プラン */}
+                <div className="p-4 border-2 border-gray-300 rounded-lg bg-gray-50 relative">
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                      🔒 準備中
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between opacity-60">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="text-lg font-medium text-gray-900">上級プラン</h3>
+                        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">準備中</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        毎日の禁煙記録が厳密に管理され、一度でも失敗すると返金対象外となる厳格なプラン
+                      </p>
+                      <div className="bg-red-50 p-3 rounded text-sm mb-3">
+                        <p className="font-medium text-red-900 mb-1">返金計算ロジック</p>
+                        <p className="text-red-800">毎日禁煙記録を達成した場合: 満額 - 500円が返金</p>
+                        <p className="text-red-700 text-xs mt-1">
+                          一度でも喫煙を記録した場合、または未記録のまま次の日が到来した場合: ゲームオーバー（返金なし）
+                        </p>
+                      </div>
+                      <div className="bg-red-50 p-3 rounded text-sm">
+                        <p className="font-medium text-red-900 mb-1">📝 「未記録」の定義</p>
+                        <p className="text-red-800 text-xs">
+                          上級プランにおける「未記録」は、特定の日の喫煙状況が記録されずに次の日が始まった時点を指します
+                        </p>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <div className="w-6 h-6 rounded-full border-2 border-gray-300 bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-400 text-xs">🔒</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">📋 重要なルール</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• 毎日記録をつけることで「記録成功日数」としてカウントされます</li>
-                  <li>• 禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます</li>
-                  <li>• チャレンジの途中放棄も可能ですが、参加費の返金はありません</li>
-                  <li>• 30日間毎日記録をつけた場合：
-                    {formData.payoutMethod === 'refund' ? (
-                      formData.participationFee > 500 
-                        ? ` 満額（参加費-500円）が返金されます`
-                        : ` 返金額は0円となります`
-                    ) : ` 満額（参加費）が募金されます`}
-                  </li>
-                </ul>
-              </div>
-
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-2">💡 目標金額</h4>
-                <p className="text-gray-700 text-sm">
-                  {formData.payoutMethod === 'refund' ? (
-                    <>
-                      <strong>目標取り戻し金額:</strong> ¥{
-                        formData.participationFee > 500 
-                          ? (formData.participationFee - 500).toLocaleString()
-                          : '0'
-                      }
-                      <br />
-                      <span className="text-xs text-gray-600">
-                        {formData.participationFee === 0 
-                          ? '（参加費0円のため手数料なし）'
-                          : formData.participationFee <= 500
-                          ? '（参加費が500円以下のため返金なし）'
-                          : '（参加費 - 手数料500円）'
-                        }
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <strong>目標募金額:</strong> ¥{formData.participationFee.toLocaleString()}
-                      <br />
-                      <span className="text-xs text-gray-600">（参加費の全額）</span>
-                    </>
-                  )}
-                </p>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-medium text-purple-900 mb-2">💰 参加費とリターン</h4>
+                <div className="text-sm text-purple-800 space-y-2">
+                  <p><strong>参加費:</strong> 月のタバコ代を目安に設定します（¥{formData.participationFee.toLocaleString()}）</p>
+                  <p><strong>返金:</strong> 記録日数に応じて、参加費の一部が返金されます</p>
+                  <p><strong>手数料:</strong> 参加費が1円以上の場合、返金処理手数料として500円がかかります</p>
+                  <p><strong>目標金額:</strong> ¥{
+                    formData.participationFee > 500 
+                      ? (formData.participationFee - 500).toLocaleString()
+                      : '0'
+                  }（参加費 - 手数料500円）</p>
+                </div>
               </div>
               
               <div className="flex space-x-3">
@@ -664,123 +655,10 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* ステップ4: 募金先選択（募金選択時のみ） */}
-          {step === 4 && formData.payoutMethod === 'donation' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <span className="text-4xl block mb-4">🎯</span>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">おすすめ寄付先</h2>
-                <p className="text-gray-600">
-                  チャレンジ達成率に応じた金額を寄付します
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {totalTargetsCount}の寄付先から厳選した6つをご紹介
-                </p>
-                <div className="mt-3 flex justify-center">
-                  <button
-                    onClick={handleRefreshRecommendations}
-                    disabled={isLoadingTargets}
-                    className="inline-flex items-center px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-                  >
-                    🔄 別の寄付先を提案
-                  </button>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                {isLoadingTargets ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                    新しい寄付先を探しています...
-                  </div>
-                ) : donationTargets.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    利用可能な募金先がありません。
-                    <button
-                      onClick={handleRefreshRecommendations}
-                      className="ml-2 text-indigo-600 hover:underline"
-                    >
-                      再読み込み
-                    </button>
-                  </div>
-                ) : (
-                  donationTargets.map((target) => (
-                    <label
-                      key={target.id}
-                      className={`block p-4 border rounded-lg cursor-pointer transition-colors ${
-                        formData.donationTargetId === target.id
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                      onClick={() => handleRadioClick(() => setFormData(prev => ({ 
-                        ...prev, 
-                        donationTargetId: target.id 
-                      })))}
-                    >
-                      <input
-                        type="radio"
-                        name="donationTarget"
-                        value={target.id}
-                        checked={formData.donationTargetId === target.id}
-                        onChange={(e) => handleRadioClick(() => setFormData(prev => ({ 
-                          ...prev, 
-                          donationTargetId: e.target.value 
-                        })))}
-                        className="sr-only"
-                      />
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{target.name}</h3>
-                          <p className="text-sm text-gray-600 mt-1">{target.description}</p>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          {target.website_url && (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                if (target.website_url) {
-                                  window.open(target.website_url, '_blank')
-                                }
-                              }}
-                              className="text-xs text-blue-600 hover:text-blue-800 border border-blue-300 rounded px-2 py-1"
-                            >
-                              詳細
-                            </button>
-                          )}
-                          {formData.donationTargetId === target.id && (
-                            <span className="text-indigo-600 text-lg">✓</span>
-                          )}
-                        </div>
-                      </div>
-                    </label>
-                  ))
-                )}
-              </div>
-              
-              <div className="text-center text-xs text-gray-500 bg-gray-50 p-3 rounded">
-                💡 毎回異なる寄付先をおすすめしています。あなたの関心に合う活動を見つけてください。
-              </div>
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={prevStep}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-                >
-                  戻る
-                </button>
-                <button
-                  onClick={nextStep}
-                  disabled={!formData.donationTargetId}
-                  className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                >
-                  次へ
-                </button>
-              </div>
-            </div>
-          )}
 
-          {/* ステップ5: 記録時間設定 */}
-          {step === 5 && (
+
+          {/* ステップ4: 記録時間設定 */}
+          {step === 4 && (
             <div className="space-y-6">
               <div className="text-center">
                 <span className="text-4xl block mb-4">⏰</span>

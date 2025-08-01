@@ -1,7 +1,6 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
-
 # Supabase + Next.js App Router 認証ベストプラクティス
 
 ## 1. プロジェクト設定

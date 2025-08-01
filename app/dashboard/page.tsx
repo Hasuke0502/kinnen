@@ -75,16 +75,7 @@ export default async function DashboardPage({
     .eq('challenge_id', challenge.id)
     .order('record_date', { ascending: true })
 
-  // 募金先情報を取得（募金選択の場合）
-  let donationTarget = null
-  if (profile.payout_method === 'donation' && profile.donation_target_id) {
-    const { data } = await supabase
-      .from('donation_targets')
-      .select('*')
-      .eq('id', profile.donation_target_id)
-      .single()
-    donationTarget = data
-  }
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,7 +88,6 @@ export default async function DashboardPage({
             challenge={challenge}
             todayRecord={todayRecord}
             records={records || []}
-            donationTarget={donationTarget}
             message={resolvedSearchParams.message}
             isGameCompletedFromParams={isGameCompletedFromParams}
           />
