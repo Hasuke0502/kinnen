@@ -131,10 +131,16 @@ export async function submitRecord(formData: FormData) {
     const newAchievementRate = (newSuccessDays / 30) * 100
     const newDonationAmount = Math.floor(profile.participation_fee * (newSuccessDays / 30))
 
-    // チャレンジの終了日を計算
+    // チャレンジの終了日を計算（30日後の日付が終了した場合）
     const challengeEndDate = new Date(startDate)
     challengeEndDate.setDate(startDate.getDate() + 29) // 30日チャレンジなので、開始日から29日後が最終日
-    const isFinalDayRecord = today === challengeEndDate.toISOString().split('T')[0]
+    
+    // 現在時刻が最終日の終了時刻（23:59:59）を過ぎているかチェック
+    const currentDateTime = getJSTTime() // 日本時間での現在時刻
+    const endDateTime = new Date(challengeEndDate)
+    endDateTime.setHours(23, 59, 59, 999) // 最終日の23:59:59.999
+    
+    const isFinalDayRecord = currentDateTime > endDateTime
 
     console.log('チャレンジ統計更新:', {
       recordCount,

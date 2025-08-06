@@ -53,7 +53,7 @@ export default function CommercialTransactionsPage() {
             <h2 className="text-xl font-semibold text-gray-800 mb-2">6. 商品代金以外の必要料金</h2>
             <ul className="list-disc list-inside pl-4">
               <li>決済手数料：無料</li>
-              <li>返金手数料：参加費が1円以上の場合、返金処理手数料として500円がかかります。（参加費が0円の場合は手数料なし）</li>
+              <li>返金手数料：無料</li>
             </ul>
           </section>
 

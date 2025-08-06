@@ -60,7 +60,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
+          <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center mb-8 sm:mb-12">
             <Link
               href="/auth/login"
               className="w-full sm:w-auto flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"

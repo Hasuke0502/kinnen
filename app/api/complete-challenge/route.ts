@@ -33,23 +33,28 @@ export async function POST(_request: NextRequest) {
       )
     }
 
-    // チャレンジ期間の確認
+    // チャレンジ期間の確認（30日後の日付が終了した場合）
     const startDate = new Date(challenge.start_date)
     const endDate = new Date(challenge.end_date)
     const currentDate = new Date()
     
+    // 最終日の終了時刻（23:59:59.999）を設定
+    const endDateTime = new Date(endDate)
+    endDateTime.setHours(23, 59, 59, 999)
+    
     console.log('📅 Date check:', {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      endDateTime: endDateTime.toISOString(),
       currentDate: currentDate.toISOString(),
-      isCompleted: currentDate >= endDate
+      isCompleted: currentDate > endDateTime
     })
 
-    // 30日経過したかチェック
-    if (currentDate < endDate) {
+    // 30日後の日付が終了したかチェック
+    if (currentDate <= endDateTime) {
       return NextResponse.json({
         message: 'Challenge is still ongoing',
-        remaining_days: Math.ceil((endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+        remaining_days: Math.ceil((endDateTime.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
       })
     }
 

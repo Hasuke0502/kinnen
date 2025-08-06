@@ -93,11 +93,9 @@ export async function POST(request: NextRequest) {
 
     // 返金額の計算
     const totalSuccessDays = challenge.total_success_days || 0
-    let refundAmount = 0
     
-    if (profile.participation_fee > 500) {
-      refundAmount = Math.floor((profile.participation_fee - 500) * (totalSuccessDays / 30))
-    }
+    // 手数料なしで計算：参加費 × (記録成功日数 / 30)
+    const refundAmount = Math.floor(profile.participation_fee * (totalSuccessDays / 30))
 
     console.log('💰 Refund calculation:', {
       participationFee: profile.participation_fee,

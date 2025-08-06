@@ -36,7 +36,7 @@ export async function POST(_request: NextRequest) {
       )
     }
 
-    // チャレンジを30日経過したかのように強制更新
+    // チャレンジを30日後の日付が終了したかのように強制更新
     const today = new Date()
     const thirtyDaysAgo = new Date(today)
     thirtyDaysAgo.setDate(today.getDate() - 30)

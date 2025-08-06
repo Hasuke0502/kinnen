@@ -64,15 +64,10 @@ export default function DashboardClient({
   const currentSuccessRate = cappedElapsedDays > 0 ? (actualSuccessDays / cappedElapsedDays) * 100 : 0
   
   // 返金額の計算
-  let payoutAmount = 0
-  // 返金の場合：参加費が500円を超える場合のみ手数料を引いて計算
-  if (profile.participation_fee > 500) {
-    payoutAmount = Math.floor((profile.participation_fee - 500) * (actualSuccessDays / totalDays))
-  } else {
-    payoutAmount = 0
-  }
+  // 手数料なしで計算：参加費 × (記録成功日数 / 30)
+  const payoutAmount = Math.floor(profile.participation_fee * (actualSuccessDays / totalDays))
   
-  const remainingAmount = profile.participation_fee - (profile.participation_fee > 500 ? payoutAmount + 500 : payoutAmount)
+  const remainingAmount = profile.participation_fee - payoutAmount
 
   // カレンダー生成
   const generateCalendar = () => {
@@ -331,10 +326,7 @@ export default function DashboardClient({
               </div>
               
               <div className="text-xs text-gray-500">
-                {profile.participation_fee > 500
-                  ? '(参加費 - 500円) × (記録成功日数 ÷ 30日) = 返金額'
-                  : '参加費が500円以下のため返金なし'
-                }
+                参加費 × (記録成功日数 ÷ 30日) = 返金額
               </div>
             </div>
           </div>

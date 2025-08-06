@@ -31,6 +31,8 @@ export default async function DashboardPage({
     redirect('/auth/login')
   }
 
+  console.log('Current user ID:', user.id)
+
   // プロファイルとアクティブなチャレンジを取得
   const [profileResponse, challengeResponse] = await Promise.all([
     supabase
@@ -46,13 +48,44 @@ export default async function DashboardPage({
       .single()
   ])
 
-  if (profileResponse.error || !profileResponse.data) {
-    console.error('Profile error:', profileResponse.error)
+  console.log('Profile response:', { error: profileResponse.error, data: profileResponse.data })
+  console.log('Challenge response:', { error: challengeResponse.error, data: challengeResponse.data })
+
+  // プロファイルが存在しない場合
+  if (profileResponse.error) {
+    if (profileResponse.error.code === 'PGRST116') {
+      // プロファイルが見つからない場合
+      console.log('Profile not found for user:', user.id)
+      redirect('/onboarding')
+    } else {
+      // その他のエラーの場合
+      console.error('Profile error:', profileResponse.error)
+      console.error('User ID:', user.id)
+      redirect('/onboarding')
+    }
+  }
+
+  if (!profileResponse.data) {
+    console.log('No profile data found for user:', user.id)
     redirect('/onboarding')
   }
 
-  if (challengeResponse.error || !challengeResponse.data) {
-    console.error('Challenge error:', challengeResponse.error)
+  // チャレンジが存在しない場合
+  if (challengeResponse.error) {
+    if (challengeResponse.error.code === 'PGRST116') {
+      // チャレンジが見つからない場合
+      console.log('Active challenge not found for user:', user.id)
+      redirect('/onboarding')
+    } else {
+      // その他のエラーの場合
+      console.error('Challenge error:', challengeResponse.error)
+      console.error('User ID:', user.id)
+      redirect('/onboarding')
+    }
+  }
+
+  if (!challengeResponse.data) {
+    console.log('No active challenge found for user:', user.id)
     redirect('/onboarding')
   }
 

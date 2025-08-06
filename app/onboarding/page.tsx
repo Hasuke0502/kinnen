@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { getJSTDate } from '@/utils/date'
 
 // 音声効果のための関数
 const playClickSound = () => {
@@ -153,14 +154,18 @@ export default function OnboardingPage() {
 
       // チャレンジの作成
       console.log('5️⃣ チャレンジ作成準備中...')
-      const startDate = new Date()
-      const endDate = new Date(startDate)
-      endDate.setDate(endDate.getDate() + 30)
+      const jstToday = getJSTDate() // 日本時間での今日の日付を取得
+
+      // 30日後の日付をJSTで計算
+      const startDateObj = new Date(jstToday);
+      const endDateObj = new Date(startDateObj);
+      endDateObj.setDate(startDateObj.getDate() + 29); // 30日チャレンジなので、開始日から29日後が最終日
+      const jstEndDate = endDateObj.toISOString().split('T')[0];
 
       const challengeData = {
         user_id: user.id,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
+        start_date: jstToday, // 日本時間で取得した日付を設定
+        end_date: jstEndDate, // 計算した日本時間での終了日を設定
         status: 'active' as const
       }
 
@@ -293,10 +298,9 @@ export default function OnboardingPage() {
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h4 className="font-medium text-yellow-900 mb-2">💡 重要なポイント</h4>
                 <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• <strong>返金システム</strong>：手数料500円を差し引いた金額が対象となります</li>
+                  <li>• <strong>返金システム</strong>：参加費と記録日数に応じて返金されます</li>
                   <li>• <strong>記録をつけなかった日はカウントされません</strong></li>
-                  <li>• 30日間毎日記録をつけた場合、満額（参加費-500円）が返金されます</li>
-                  <li>• 参加費が500円以下の場合は返金されません</li>
+                  <li>• 30日間毎日記録をつけた場合、満額（参加費の全額）が返金されます</li>
                 </ul>
               </div>
 
@@ -485,12 +489,7 @@ export default function OnboardingPage() {
                       <div className="bg-blue-50 p-3 rounded text-sm mb-3">
                         <p className="font-medium text-blue-900 mb-1">返金計算ロジック</p>
                         <p className="text-blue-800 mb-2">
-                          {formData.participationFee > 500 
-                            ? `（参加費 - 500円）× 記録成功日数 ÷ 30日`
-                            : formData.participationFee === 0
-                            ? `0円（手数料なし）`
-                            : `0円（参加費が500円以下のため）`
-                          }
+                          参加費 × 記録成功日数 ÷ 30日
                         </p>
                         <p className="text-blue-700 text-xs">
                           禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます
@@ -500,22 +499,10 @@ export default function OnboardingPage() {
                       {/* 返金計算ロジックの具体例 */}
                       <div className="bg-green-50 p-3 rounded text-sm mb-3">
                         <p className="font-medium text-green-900 mb-1">📊 返金計算例</p>
-                        {formData.participationFee === 0 ? (
-                          <div className="text-green-800 text-xs">
-                            <p><strong>参加費0円、20日記録成功した場合</strong></p>
-                            <p>→ <strong>0円が返金</strong>（手数料なし）</p>
-                          </div>
-                        ) : formData.participationFee <= 500 ? (
-                          <div className="text-green-800 text-xs">
-                            <p><strong>参加費{formData.participationFee}円、20日記録成功した場合</strong></p>
-                            <p>→ <strong>0円が返金</strong>（参加費が500円以下のため）</p>
-                          </div>
-                        ) : (
-                          <div className="text-green-800 text-xs">
-                            <p><strong>参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</strong></p>
-                            <p>→ （{formData.participationFee.toLocaleString()}円 - 500円）× 20 ÷ 30 = <strong>{Math.round((formData.participationFee - 500) * 20 / 30).toLocaleString()}円が返金</strong></p>
-                          </div>
-                        )}
+                        <div className="text-green-800 text-xs">
+                          <p><strong>参加費{formData.participationFee.toLocaleString()}円、20日記録成功した場合</strong></p>
+                          <p>→ {formData.participationFee.toLocaleString()}円 × 20 ÷ 30 = <strong>{Math.round(formData.participationFee * 20 / 30).toLocaleString()}円が返金</strong></p>
+                        </div>
                       </div>
 
                       {/* 重要なルール */}
@@ -524,11 +511,7 @@ export default function OnboardingPage() {
                         <ul className="text-yellow-800 text-xs space-y-1">
                           <li>• 毎日記録をつけることで「記録成功日数」としてカウントされます</li>
                           <li>• 禁煙できた日も、吸ってしまった日も、記録すれば成功日としてカウントされます</li>
-                          <li>• 30日間毎日記録をつけた場合：
-                            {formData.participationFee > 500 
-                              ? ` 満額（参加費-500円）が返金されます`
-                              : ` 返金額は0円となります`}
-                          </li>
+                          <li>• 30日間毎日記録をつけた場合： 満額（参加費の全額）が返金されます</li>
                           <li>• チャレンジの途中放棄も可能ですが、参加費の返金はありません</li>
                         </ul>
                       </div>
@@ -629,12 +612,7 @@ export default function OnboardingPage() {
                 <div className="text-sm text-purple-800 space-y-2">
                   <p><strong>参加費:</strong> 月のタバコ代を目安に設定します（¥{formData.participationFee.toLocaleString()}）</p>
                   <p><strong>返金:</strong> 記録日数に応じて、参加費の一部が返金されます</p>
-                  <p><strong>手数料:</strong> 参加費が1円以上の場合、返金処理手数料として500円がかかります</p>
-                  <p><strong>目標金額:</strong> ¥{
-                    formData.participationFee > 500 
-                      ? (formData.participationFee - 500).toLocaleString()
-                      : '0'
-                  }（参加費 - 手数料500円）</p>
+                  <p><strong>目標金額:</strong> ¥{formData.participationFee.toLocaleString()}（参加費の全額）</p>
                 </div>
               </div>
               

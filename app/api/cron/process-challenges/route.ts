@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // 1. 完了対象のチャレンジを取得（30日経過したactive状態のもの）
-    const today = new Date().toISOString().split('T')[0]
+    // 1. 完了対象のチャレンジを取得（30日後の日付が終了したactive状態のもの）
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
     console.log('📅 Checking challenges for date:', today)
 
     const { data: expiredChallenges, error: fetchError } = await supabase
@@ -121,11 +122,8 @@ export async function GET(request: NextRequest) {
 
           // 返金額計算
           const totalSuccessDays = challenge.total_success_days || 0
-          let refundAmount = 0
-          
-          if (profile.participation_fee > 500) {
-            refundAmount = Math.floor((profile.participation_fee - 500) * (totalSuccessDays / 30))
-          }
+          // 手数料なしで計算：参加費 × (記録成功日数 / 30)
+          const refundAmount = Math.floor(profile.participation_fee * (totalSuccessDays / 30))
 
           console.log(`💰 Calculated refund: ${refundAmount} yen for ${totalSuccessDays} success days`)
 
