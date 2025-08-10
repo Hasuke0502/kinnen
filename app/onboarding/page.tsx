@@ -221,10 +221,7 @@ export default function OnboardingPage() {
     callback()
   }
 
-  const handleRadioClick = (callback: () => void) => {
-    playClickSound()
-    callback()
-  }
+
 
 
 

@@ -7,7 +7,7 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 if (stripeSecretKey) {
   // APIバージョンは安定版に固定（または未指定でデフォルトに委ねる）
   stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2025-06-30.basil',
   })
 } else {
   // 本番では未設定は致命的。開発環境ではモック返金で回避可能に。
