@@ -441,6 +441,7 @@ export default function DashboardClient({
           <p className="text-lg mb-4">
             ¥{payoutAmount.toLocaleString()}を取り戻しました
           </p>
+          <p className="text-sm text-gray-500 -mt-2 mb-4">返金には数日かかる恐れがあります。</p>
           
           <div className="mt-6 flex flex-col space-y-4">
             <form action={restartChallenge}>

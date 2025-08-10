@@ -21,7 +21,7 @@ interface Database {
         Row: {
           user_id: string
           participation_fee: number
-          payout_method: 'refund' | 'donation'
+          payout_method: 'refund'
         }
       }
     }
@@ -78,6 +78,10 @@ Deno.serve(async (req: Request) => {
     const today = new Date().toISOString().split('T')[0]
     console.log('📅 Checking challenges for date:', today)
 
+    // 日本時間の今日（JST）を使用し、end_date が「今日より前」のもののみを完了対象とする
+    const jst = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const jstTodayStr = jst.toISOString().split('T')[0]
+
     const { data: expiredChallenges, error: fetchError } = await supabase
       .from('challenges')
       .select(`
@@ -93,7 +97,7 @@ Deno.serve(async (req: Request) => {
         refund_amount
       `)
       .eq('status', 'active')
-      .lte('end_date', today)
+      .lt('end_date', jstTodayStr)
 
     if (fetchError) {
       console.error('❌ Error fetching expired challenges:', fetchError)
@@ -119,7 +123,6 @@ Deno.serve(async (req: Request) => {
 
     let processedCount = 0
     let refundedCount = 0
-    let donationCount = 0
     const errors: string[] = []
 
     // 2. 各チャレンジを処理
@@ -209,9 +212,6 @@ Deno.serve(async (req: Request) => {
           } else {
             console.log(`ℹ️ No refund amount for challenge ${challenge.id} (calculated: ¥${refundAmount})`)
           }
-        } else if (profile.payout_method === 'donation') {
-          console.log(`🎁 Challenge ${challenge.id} marked for donation processing`)
-          donationCount++
         }
 
       } catch (challengeError) {
@@ -224,7 +224,6 @@ Deno.serve(async (req: Request) => {
     console.log(`🎉 Processing completed:`)
     console.log(`   - Challenges processed: ${processedCount}`)
     console.log(`   - Refunds processed: ${refundedCount}`)
-    console.log(`   - Donations marked: ${donationCount}`)
     console.log(`   - Errors: ${errors.length}`)
 
     return new Response(
@@ -234,7 +233,6 @@ Deno.serve(async (req: Request) => {
         summary: {
           processed_count: processedCount,
           refunded_count: refundedCount,
-          donation_count: donationCount,
           error_count: errors.length
         },
         errors: errors.length > 0 ? errors : undefined
@@ -272,9 +270,10 @@ async function processStripeRefund(
       throw new Error('STRIPE_SECRET_KEY not configured')
     }
 
-    const stripeRefundAmount = refundAmountYen * 100 // 円 -> セント変換
+    // JPYはゼロ小数通貨のため、そのままの金額（円）を渡す
+    const stripeRefundAmount = refundAmountYen
 
-    console.log(`🔧 Creating Stripe refund for ${paymentIntentId}: ${stripeRefundAmount} cents`)
+    console.log(`🔧 Creating Stripe refund for ${paymentIntentId}: ${stripeRefundAmount} JPY`)
 
     const response = await fetch('https://api.stripe.com/v1/refunds', {
       method: 'POST',

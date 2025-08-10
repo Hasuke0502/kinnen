@@ -32,12 +32,7 @@ export default async function SettingsPage() {
     .eq('status', 'active')
     .single()
 
-  // 募金先の取得
-  const { data: donationTarget } = await supabase
-    .from('donation_targets')
-    .select('*')
-    .eq('id', profile.donation_target_id)
-    .single()
+  // 募金機能は廃止済みのため、募金先の取得は行わない
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,14 +73,7 @@ export default async function SettingsPage() {
 
                 
 
-                {donationTarget && (
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">募金先</p>
-                      <p className="text-xs text-gray-600">{donationTarget.name}</p>
-                    </div>
-                  </div>
-                )}
+                {/* 募金機能は廃止 */}
 
                 {challenge && (
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">

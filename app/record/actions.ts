@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { createRefund } from '@/lib/stripe'
 
 // 日本時間での日付を取得する関数
 function getJSTDate(): string {
@@ -11,6 +12,13 @@ function getJSTDate(): string {
   const jstOffset = 9 * 60 * 60 * 1000 // 9時間をミリ秒に変換
   const jstTime = new Date(now.getTime() + jstOffset)
   return jstTime.toISOString().split('T')[0]
+}
+
+// 日本時間での現在時刻（Dateオブジェクト）を取得する関数
+function getJSTTime(): Date {
+  const now = new Date()
+  const jstOffset = 9 * 60 * 60 * 1000
+  return new Date(now.getTime() + jstOffset)
 }
 
 export async function submitRecord(formData: FormData) {
@@ -36,7 +44,7 @@ export async function submitRecord(formData: FormData) {
     const [profileResult, challengeResult] = await Promise.all([
       supabase
         .from('user_profiles')
-        .select('participation_fee')
+        .select('participation_fee, payout_method')
         .eq('user_id', user.id)
         .single(),
       supabase
@@ -129,7 +137,6 @@ export async function submitRecord(formData: FormData) {
     const newFailedDays = Math.max(0, cappedElapsedDays - newSuccessDays)
     
     const newAchievementRate = (newSuccessDays / 30) * 100
-    const newDonationAmount = Math.floor(profile.participation_fee * (newSuccessDays / 30))
 
     // チャレンジの終了日を計算（30日後の日付が終了した場合）
     const challengeEndDate = new Date(startDate)
@@ -148,8 +155,7 @@ export async function submitRecord(formData: FormData) {
       cappedElapsedDays,
       newSuccessDays,
       newFailedDays,
-      newAchievementRate,
-      newDonationAmount
+      newAchievementRate
     })
 
     const { error: challengeError } = await supabase
@@ -158,7 +164,6 @@ export async function submitRecord(formData: FormData) {
         total_success_days: newSuccessDays,
         total_failed_days: newFailedDays,
         achievement_rate: newAchievementRate,
-        donation_amount: newDonationAmount,
         status: isFinalDayRecord || newSuccessDays === 30 ? 'completed' : challenge.status // 最終日記録または30日成功で完了
       })
       .eq('id', challenge.id)
@@ -169,6 +174,54 @@ export async function submitRecord(formData: FormData) {
     }
 
     console.log('チャレンジ統計更新完了')
+
+    // ゲーム終了条件を満たした場合は自動返金を実行
+    const didComplete = isFinalDayRecord || newSuccessDays === 30
+    if (didComplete) {
+      try {
+        // 返金条件: 返金選択ユーザー、支払い完了、PaymentIntentあり、無料参加ではない
+        if (
+          profile.payout_method === 'refund' &&
+          challenge.payment_completed &&
+          !!challenge.payment_intent_id &&
+          challenge.payment_intent_id !== 'free_participation' &&
+          !challenge.refund_completed
+        ) {
+          const refundAmount = Math.floor(profile.participation_fee * (newSuccessDays / 30))
+
+          if (refundAmount > 0) {
+            const refund = await createRefund(
+              challenge.payment_intent_id as string,
+              // JPYは最小単位=1円
+              refundAmount
+            )
+
+            const { error: refundUpdateError } = await supabase
+              .from('challenges')
+              .update({
+                refund_completed: true,
+                refund_amount: refundAmount,
+                refund_completed_at: new Date().toISOString(),
+                stripe_refund_id: refund.id
+              })
+              .eq('id', challenge.id)
+
+            if (refundUpdateError) {
+              console.error('返金後のチャレンジ更新に失敗しました:', refundUpdateError)
+            } else {
+              console.log('返金完了:', { refundId: refund.id, refundAmount })
+            }
+          } else {
+            console.log('返金対象額が0円のためスキップしました')
+          }
+        } else {
+          console.log('返金条件を満たさないためスキップしました')
+        }
+      } catch (refundError) {
+        console.error('自動返金処理でエラーが発生しました:', refundError)
+        // ここでは処理を中断せず、UXを優先してダッシュボードへリダイレクトを続行
+      }
+    }
 
     // キャッシュの再検証を強化
     console.log('キャッシュを再検証中...')

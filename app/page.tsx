@@ -126,6 +126,13 @@ export default async function Home() {
           </div>
         </div>
       </div>
+
+      {/* 特定商取引法へのリンク（トップにも明示） */}
+      <div className="bg-white/10 text-center py-8">
+        <Link href="/legal/commercial-transactions" className="text-gray-100 underline">
+          特定商取引法に基づく表記
+        </Link>
+      </div>
     </div>
   )
 }

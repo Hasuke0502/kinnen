@@ -27,12 +27,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
     {
-      url: 'https://your-domain.com/donations',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
       url: 'https://your-domain.com/legal/commercial-transactions',
       lastModified: new Date(),
       changeFrequency: 'monthly',

@@ -91,6 +91,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // すでに返金済みかチェック（重複返金防止）
+    if (challenge.refund_completed) {
+      return NextResponse.json(
+        { error: 'Already refunded', refund_id: challenge.stripe_refund_id, refund_amount: challenge.refund_amount }, 
+        { status: 400 }
+      )
+    }
+
     // 返金額の計算
     const totalSuccessDays = challenge.total_success_days || 0
     
@@ -113,10 +121,10 @@ export async function POST(request: NextRequest) {
 
     // Stripe返金処理
     console.log('6️⃣ Processing Stripe refund...')
-    const stripeRefundAmount = refundAmount * 100 // 円 → セント変換
     const refund = await createRefund(
       challenge.payment_intent_id,
-      stripeRefundAmount
+      // JPYはゼロ小数通貨のため、そのままの金額を渡す
+      refundAmount
     )
     console.log('✅ Stripe refund created:', refund.id)
 

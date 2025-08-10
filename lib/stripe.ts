@@ -1,16 +1,18 @@
 import Stripe from 'stripe'
 
-// Stripe Secret Keyの存在確認
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('❌ STRIPE_SECRET_KEY environment variable is not set!')
-  throw new Error('STRIPE_SECRET_KEY environment variable is required')
+// Stripe初期化（遅延）
+let stripe: Stripe | null = null
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+
+if (stripeSecretKey) {
+  // APIバージョンは安定版に固定（または未指定でデフォルトに委ねる）
+  stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2024-06-20',
+  })
+} else {
+  // 本番では未設定は致命的。開発環境ではモック返金で回避可能に。
+  console.warn('⚠️ STRIPE_SECRET_KEY is not set. Stripe features are disabled. In development, refunds will be mocked.')
 }
-
-// console.log('🔧 Initializing Stripe with key:', process.env.STRIPE_SECRET_KEY.substring(0, 12) + '...')
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-06-30.basil', // 正しいStripe APIバージョン
-})
 
 export interface PaymentIntent {
   id: string
@@ -30,6 +32,9 @@ export async function createPaymentIntent(
   
   try {
     console.log('🔧 Creating Stripe Payment Intent...')
+    if (!stripe) {
+      throw new Error('Stripe is not configured')
+    }
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
@@ -66,6 +71,9 @@ export async function createPaymentIntent(
 // 支払いインテントの状態を確認
 export async function getPaymentIntent(paymentIntentId: string): Promise<PaymentIntent | null> {
   try {
+    if (!stripe) {
+      throw new Error('Stripe is not configured')
+    }
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
     return {
@@ -88,6 +96,9 @@ export function verifyWebhookSignature(
   secret: string
 ): Stripe.Event {
   try {
+    if (!stripe) {
+      throw new Error('Stripe is not configured')
+    }
     return stripe.webhooks.constructEvent(payload, signature, secret)
   } catch (error) {
     console.error('Webhook signature verification failed:', error)
@@ -124,6 +135,19 @@ export async function createRefund(
   
   try {
     console.log('🔧 Creating Stripe Refund...')
+    if (!stripe) {
+      // 開発環境ではStripe未設定でも返金フローの検証ができるようにモック
+      if (process.env.NODE_ENV !== 'production') {
+        const mock = {
+          id: `test_refund_${Date.now()}`,
+          amount: amount ?? 0,
+          status: 'succeeded',
+        }
+        console.warn('🧪 Returning mocked refund (dev only):', mock)
+        return mock
+      }
+      throw new Error('Stripe is not configured')
+    }
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentId,
       ...(amount && { amount }),

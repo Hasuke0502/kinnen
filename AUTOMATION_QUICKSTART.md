@@ -129,7 +129,6 @@ curl -X POST https://YOUR_PROJECT.supabase.co/functions/v1/process-completed-cha
   "summary": {
     "processed_count": 2,
     "refunded_count": 1,
-    "donation_count": 1,
     "error_count": 0
   }
 }

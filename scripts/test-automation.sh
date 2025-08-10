@@ -78,13 +78,12 @@ test_edge_function() {
             # 処理結果の表示
             PROCESSED=$(echo "$BODY" | grep -o '"processed_count":[0-9]*' | cut -d':' -f2)
             REFUNDED=$(echo "$BODY" | grep -o '"refunded_count":[0-9]*' | cut -d':' -f2)
-            DONATIONS=$(echo "$BODY" | grep -o '"donation_count":[0-9]*' | cut -d':' -f2)
             ERRORS=$(echo "$BODY" | grep -o '"error_count":[0-9]*' | cut -d':' -f2)
             
             echo "📊 処理結果:"
             echo "  - 処理済みチャレンジ: ${PROCESSED:-0}"
             echo "  - 返金処理完了: ${REFUNDED:-0}"
-            echo "  - 募金対象: ${DONATIONS:-0}"
+            # 募金機能は廃止
             echo "  - エラー: ${ERRORS:-0}"
         else
             log_warning "処理でエラーが発生した可能性があります"

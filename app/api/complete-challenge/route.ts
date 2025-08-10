@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createRefund } from '@/lib/stripe'
 
 export async function POST(_request: NextRequest) {
   console.log('🚀 Challenge completion check API called')
@@ -33,12 +34,12 @@ export async function POST(_request: NextRequest) {
       )
     }
 
-    // チャレンジ期間の確認（30日後の日付が終了した場合）
+    // チャレンジ期間の確認（JST基準で最終日の終了後）
     const startDate = new Date(challenge.start_date)
     const endDate = new Date(challenge.end_date)
-    const currentDate = new Date()
-    
-    // 最終日の終了時刻（23:59:59.999）を設定
+    // 日本時間の現在時刻
+    const currentDateTimeJST = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    // 最終日の終了時刻（JST 23:59:59.999）
     const endDateTime = new Date(endDate)
     endDateTime.setHours(23, 59, 59, 999)
     
@@ -46,15 +47,15 @@ export async function POST(_request: NextRequest) {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       endDateTime: endDateTime.toISOString(),
-      currentDate: currentDate.toISOString(),
-      isCompleted: currentDate > endDateTime
+      currentDate: currentDateTimeJST.toISOString(),
+      isCompleted: currentDateTimeJST > endDateTime
     })
 
     // 30日後の日付が終了したかチェック
-    if (currentDate <= endDateTime) {
+    if (currentDateTimeJST <= endDateTime) {
       return NextResponse.json({
         message: 'Challenge is still ongoing',
-        remaining_days: Math.ceil((endDateTime.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+        remaining_days: Math.ceil((endDateTime.getTime() - currentDateTimeJST.getTime()) / (1000 * 60 * 60 * 24))
       })
     }
 
@@ -92,48 +93,67 @@ export async function POST(_request: NextRequest) {
       )
     }
 
-    // 返金が必要な場合は返金処理を実行
-    if (profile.payout_method === 'refund' && challenge.payment_completed) {
-      console.log('6️⃣ Initiating refund process...')
-      
-      try {
-        const refundResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/refund`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            challengeId: challenge.id,
-            userId: user.id // ユーザーIDを明示的に渡す
-          })
-        })
+    // 返金が必要な場合は返金処理を直接実行
+    if (
+      profile.payout_method === 'refund' &&
+      challenge.payment_completed &&
+      challenge.payment_intent_id &&
+      challenge.payment_intent_id !== 'free_participation' &&
+      !challenge.refund_completed
+    ) {
+      console.log('6️⃣ Initiating refund process (direct)...')
 
-        if (!refundResponse.ok) {
-          const errorData = await refundResponse.json()
-          console.error('❌ Refund failed:', errorData)
-          
+      const totalSuccessDays = challenge.total_success_days || 0
+      const refundAmount = Math.floor(profile.participation_fee * (totalSuccessDays / 30))
+
+      if (refundAmount <= 0) {
+        return NextResponse.json({
+          challenge_completed: true,
+          refund_status: 'skipped',
+          refund_amount: 0,
+          message: '返金対象額がありません'
+        })
+      }
+
+      try {
+        const refund = await createRefund(
+          challenge.payment_intent_id,
+          // JPYは最小単位=1円のため、そのまま渡す
+          refundAmount
+        )
+
+        const { error: updateError } = await supabase
+          .from('challenges')
+          .update({
+            refund_completed: true,
+            refund_amount: refundAmount,
+            refund_completed_at: new Date().toISOString(),
+            stripe_refund_id: refund.id
+          })
+          .eq('id', challenge.id)
+
+        if (updateError) {
+          console.error('❌ Failed to update challenge after refund:', updateError)
           return NextResponse.json({
             challenge_completed: true,
-            refund_status: 'failed',
-            refund_error: errorData.error,
-            message: 'チャレンジは完了しましたが、返金処理でエラーが発生しました'
-          })
+            refund_status: 'partial',
+            refund_amount: refundAmount,
+            refund_id: refund.id,
+            message: '返金は完了しましたが、記録更新に失敗しました'
+          }, { status: 500 })
         }
 
-        const refundData = await refundResponse.json()
-        console.log('✅ Refund successful:', refundData)
-
+        console.log('✅ Refund successful:', refund.id)
         return NextResponse.json({
           challenge_completed: true,
           refund_status: 'success',
-          refund_amount: refundData.refund_amount,
-          refund_id: refundData.refund_id,
+          refund_amount: refundAmount,
+          refund_id: refund.id,
           message: 'チャレンジ完了と返金処理が正常に完了しました'
         })
 
       } catch (refundError) {
         console.error('❌ Refund process error:', refundError)
-        
         return NextResponse.json({
           challenge_completed: true,
           refund_status: 'failed',
@@ -143,12 +163,11 @@ export async function POST(_request: NextRequest) {
       }
     }
 
-    // 募金選択の場合
-    console.log('6️⃣ Challenge completed (donation selected)')
+    // 返金対象でない場合（返金選択ではない、または支払い未完了など）
     return NextResponse.json({
       challenge_completed: true,
-      payout_method: 'donation',
-      message: 'チャレンジが完了しました（募金選択）'
+      refund_status: 'none',
+      message: 'チャレンジが完了しました'
     })
 
   } catch (error) {
