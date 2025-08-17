@@ -6,9 +6,26 @@ import DashboardClient from '@/components/DashboardClient'
 import { cookies } from 'next/headers'
 import { getJSTDate } from '@/lib/dateUtils';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kinnen.vercel.app'
+
 export const metadata: Metadata = {
   title: 'ダッシュボード | 禁煙30日チャレンジ',
   description: 'あなたの禁煙30日チャレンジの進捗、マネーモンスターとの戦いの状況、取り戻し予定金額をリアルタイムで確認できます。',
+  openGraph: {
+    type: 'website',
+    url: `${siteUrl}/dashboard`,
+    title: 'ダッシュボード | 禁煙30日チャレンジ',
+    description: '進捗と取り戻し予定金額をリアルタイムで確認',
+    images: [
+      { url: '/og?title=%E3%83%80%E3%83%83%E3%82%B7%E3%83%A5%E3%83%9C%E3%83%BC%E3%83%89', width: 1200, height: 630, alt: 'ダッシュボード OGP' },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ダッシュボード | 禁煙30日チャレンジ',
+    description: '進捗と取り戻し予定金額をリアルタイムで確認',
+    images: ['/og?title=%E3%83%80%E3%83%83%E3%82%B7%E3%83%A5%E3%83%9C%E3%83%BC%E3%83%89'],
+  },
 };
 
 export default async function DashboardPage({

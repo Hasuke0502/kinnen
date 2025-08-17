@@ -1,8 +1,25 @@
 import type { Metadata } from 'next';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kinnen.vercel.app'
+
 export const metadata: Metadata = {
   title: '特定商取引法に基づく表記',
   description: '禁煙30日チャレンジの特定商取引法に基づく表記です。',
+  openGraph: {
+    type: 'article',
+    url: `${siteUrl}/legal/commercial-transactions`,
+    title: '特定商取引法に基づく表記',
+    description: 'サービスの提供条件や返金・支払方法などの情報を掲載しています。',
+    images: [
+      { url: '/og?title=%E7%89%B9%E5%AE%9A%E5%95%86%E5%8F%96%E5%BC%95%E6%B3%95', width: 1200, height: 630, alt: '特商法ページ OGP' },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '特定商取引法に基づく表記',
+    description: 'サービスの提供条件や返金・支払方法などの情報を掲載しています。',
+    images: ['/og?title=%E7%89%B9%E5%AE%9A%E5%95%86%E5%8F%96%E5%BC%95%E6%B3%95'],
+  },
 };
 
 export default function CommercialTransactionsPage() {

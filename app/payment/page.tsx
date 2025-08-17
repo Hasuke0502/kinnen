@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import PaymentForm from '@/components/PaymentForm'
 import Header from '@/components/Header'
 
+
 export default async function PaymentPage({
   searchParams,
 }: {

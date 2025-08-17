@@ -1,33 +1,34 @@
 import type { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kinnen.vercel.app'
   return [
     {
-      url: 'https://your-domain.com',
+      url: siteUrl,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 1,
     },
     {
-      url: 'https://your-domain.com/onboarding',
+      url: `${siteUrl}/onboarding`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://your-domain.com/dashboard',
+      url: `${siteUrl}/dashboard`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.5,
     },
     {
-      url: 'https://your-domain.com/auth/login',
+      url: `${siteUrl}/auth/login`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
-      url: 'https://your-domain.com/legal/commercial-transactions',
+      url: `${siteUrl}/legal/commercial-transactions`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.3,
